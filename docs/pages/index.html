@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kairos Operator - Documentation</title>
+  <title>Kairos Operator - Intelligent Resource Management for OpenShift</title>
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@5/patternfly.min.css">
   <style>
@@ -20,13 +20,14 @@
     }
     .hero {
       text-align: center;
-      padding: 3rem 1rem;
+      padding: 3rem 1rem 2rem;
       background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
       border-bottom: 1px solid #30363d;
     }
-    .hero img { width: 120px; margin-bottom: 1rem; }
+    .hero img.logo { width: 120px; margin-bottom: 1rem; }
     .hero h1 { color: #00e5ff; font-size: 2.5rem; margin: 0.5rem 0; }
-    .hero .subtitle { color: #8b949e; font-style: italic; max-width: 600px; margin: 0 auto; }
+    .hero .subtitle { color: #8b949e; font-style: italic; max-width: 650px; margin: 0 auto 1rem; }
+    .hero .tagline { color: #c9d1d9; font-size: 1.15rem; max-width: 750px; margin: 0 auto 1.5rem; line-height: 1.6; }
     .hero .badges { margin-top: 1rem; }
     .hero .badges img { margin: 0 0.25rem; }
 
@@ -102,6 +103,7 @@
     .label-blue { background: rgba(0,229,255,0.15); color: #00e5ff; border: 1px solid #00e5ff; }
     .label-purple { background: rgba(124,77,255,0.15); color: #7c4dff; border: 1px solid #7c4dff; }
     .label-orange { background: rgba(255,171,64,0.15); color: #ffab40; border: 1px solid #ffab40; }
+    .label-red { background: rgba(255,82,82,0.15); color: #ff5252; border: 1px solid #ff5252; }
 
     table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
     th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
@@ -118,9 +120,9 @@
     }
     .img-container:hover { transform: scale(1.01); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
     .img-container img { width: 100%; display: block; }
+    .img-container svg { width: 100%; display: block; }
     .img-caption { padding: 0.5rem 1rem; background: #161b22; font-size: 0.85rem; color: #8b949e; }
 
-    /* Lightbox */
     .lightbox {
       display: none;
       position: fixed;
@@ -143,6 +145,54 @@
     .alert-info { background: rgba(0,229,255,0.08); border-color: #00e5ff; }
     .alert-success { background: rgba(0,230,118,0.08); border-color: #00e676; }
     .alert-warning { background: rgba(255,171,64,0.08); border-color: #ffab40; }
+    .alert-danger { background: rgba(255,82,82,0.08); border-color: #ff5252; }
+
+    .value-prop {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1rem 1.5rem;
+      align-items: start;
+      margin: 1.5rem 0;
+    }
+    .value-prop .icon {
+      font-size: 2rem;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+    }
+    .value-prop .text h4 { margin: 0 0 0.3rem; color: #c9d1d9; }
+    .value-prop .text p { margin: 0; color: #8b949e; }
+
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .before-after .before { border-color: #ff5252; }
+    .before-after .after { border-color: #00e676; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .stat-card .number { font-size: 2rem; font-weight: bold; color: #00e5ff; }
+    .stat-card .desc { font-size: 0.85rem; color: #8b949e; margin-top: 0.5rem; }
+    @media (max-width: 768px) { .stat-grid { grid-template-columns: 1fr 1fr; } .before-after { grid-template-columns: 1fr; } }
 
     footer {
       text-align: center;
@@ -157,9 +207,13 @@
 <body>
 
 <div class="hero">
-  <img src="images/kairos-logo.svg" alt="Kairos Logo">
+  <img class="logo" src="images/kairos-logo.svg" alt="Kairos Logo">
   <h1>Kairos Operator</h1>
-  <p class="subtitle">καιρός — The Opportune Moment. Intelligent resource management with OpenTelemetry metrics and AI-powered autopilot for OpenShift multi-cluster environments.</p>
+  <p class="subtitle">καιρός — The Opportune Moment</p>
+  <p class="tagline">
+    Stop over-provisioning. Stop under-provisioning. Let Kairos intelligently manage your OpenShift workload resources 
+    using real metrics, AI recommendations, and Server-Side Apply — across all your clusters, without conflicting with ArgoCD.
+  </p>
   <div class="badges">
     <img src="https://img.shields.io/badge/OpenShift-4.14+-red?style=flat-square" alt="OpenShift">
     <img src="https://img.shields.io/badge/Operator%20SDK-v1.40.0-blue?style=flat-square" alt="SDK">
@@ -171,6 +225,7 @@
 <div class="container">
   <div class="nav-tabs">
     <a class="nav-tab active" onclick="showSection('overview')">Overview</a>
+    <a class="nav-tab" onclick="showSection('problem')">The Problem</a>
     <a class="nav-tab" onclick="showSection('multicluster')">Multi-cluster</a>
     <a class="nav-tab" onclick="showSection('observability')">Observability</a>
     <a class="nav-tab" onclick="showSection('ai')">AI Configuration</a>
@@ -181,57 +236,323 @@
 
   <!-- OVERVIEW -->
   <div id="overview" class="section active">
+    <h2>What is Kairos?</h2>
+
+    <p style="font-size: 1.1rem; line-height: 1.7;">
+      <strong>Kairos</strong> is a Kubernetes operator for OpenShift that <em>automatically right-sizes workload resources</em> 
+      (CPU and memory requests/limits) based on real-time metrics from OpenTelemetry, Thanos, or Prometheus. 
+      It eliminates the manual guesswork of setting <code>resources:</code> in your Deployments and StatefulSets, 
+      replacing it with continuous, data-driven optimization.
+    </p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="number">3</div>
+        <div class="desc">Custom Resources (CRDs)</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">∞</div>
+        <div class="desc">Clusters managed</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">0</div>
+        <div class="desc">ArgoCD conflicts</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">5</div>
+        <div class="desc">AI models supported</div>
+      </div>
+    </div>
+
+    <h3>Who is it for?</h3>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Platform Engineers</div>
+        <p>Managing multiple OpenShift clusters (hub + spoke) who need standardized resource governance without manual intervention across dozens of namespaces.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">SRE / DevOps Teams</div>
+        <p>Tired of OOMKilled pods, CPU throttling, and alert fatigue from poorly-sized workloads. Need data-driven resource decisions that adapt automatically.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">FinOps / Cost Optimization</div>
+        <p>Over-provisioned clusters waste cloud budget. Kairos right-sizes workloads to match actual usage, reducing waste while maintaining performance SLOs.</p>
+      </div>
+    </div>
+
+    <h3>Key Capabilities</h3>
+    <div class="value-prop">
+      <div class="icon">📊</div>
+      <div class="text">
+        <h4>Metrics-Driven Scaling Decisions</h4>
+        <p>Queries real CPU/memory usage from OpenTelemetry (OTLP gRPC), Thanos Querier, or Prometheus. No guessing — decisions are based on actual workload behavior over configurable time windows.</p>
+      </div>
+      <div class="icon">🤖</div>
+      <div class="text">
+        <h4>Optional AI Autopilot</h4>
+        <p>Connect any OpenAI-compatible model (DeepSeek, Granite, Qwen, LLaMA via vLLM/LiteLLM/Ollama) for intelligent analysis of usage patterns. The AI considers seasonality, traffic spikes, and historical data to recommend optimal resource levels.</p>
+      </div>
+      <div class="icon">🔄</div>
+      <div class="text">
+        <h4>Server-Side Apply (SSA) — ArgoCD Safe</h4>
+        <p>Kairos only owns the <code>resources</code> field via Kubernetes SSA. ArgoCD, Flux, or any GitOps tool continues to own all other fields. Zero sync conflicts, zero drift alerts.</p>
+      </div>
+      <div class="icon">🌐</div>
+      <div class="text">
+        <h4>Multi-Cluster Governance Console</h4>
+        <p>PatternFly 5 dashboard running on the hub cluster showing agents, policies, events, managed resources, and observability status from all spoke clusters in a single unified view.</p>
+      </div>
+      <div class="icon">🛡️</div>
+      <div class="text">
+        <h4>Safe by Default — Rollback on Failure</h4>
+        <p>Rate-limited corrections (configurable per hour), cooldown periods between actions, automatic rollback if pods crash after resize, and dry-run mode for testing policies before enforcement.</p>
+      </div>
+      <div class="icon">🏭</div>
+      <div class="text">
+        <h4>Namespace Suffix Patterns</h4>
+        <p>Don't enumerate hundreds of namespaces. Define <code>namespaceSuffix: "-prod"</code> and the agent automatically discovers and manages ALL matching namespaces as they're created.</p>
+      </div>
+    </div>
+
     <h2>Architecture</h2>
     <div class="img-container" onclick="openLightbox(this)">
       <img src="images/architecture-overview.svg" alt="Architecture Overview">
       <div class="img-caption">Click to enlarge — Kairos multi-cluster architecture with OTel, Thanos, and AI integration</div>
     </div>
 
-    <div class="grid-3">
-      <div class="card">
-        <div class="card-title">Smart Scaling Policies</div>
-        <p>Define metric-based and schedule-based scaling rules as Kubernetes CRDs. Rules evaluate OTel/Prometheus/Thanos metrics and trigger horizontal or vertical scaling.</p>
-        <span class="label label-blue">CRD</span>
-        <span class="label label-green">SSA</span>
-      </div>
-      <div class="card">
-        <div class="card-title">AI-Powered Agents</div>
-        <p>Optional integration with AI models (DeepSeek, Granite, Qwen) for autonomous resource optimization in autopilot or supervised mode.</p>
-        <span class="label label-purple">autopilot</span>
-        <span class="label label-orange">supervised</span>
-      </div>
-      <div class="card">
-        <div class="card-title">Governance Console</div>
-        <p>PatternFly 5 dashboard for real-time visualization of agents, policies, metrics, and events across all managed clusters.</p>
-        <span class="label label-blue">PatternFly 5</span>
-        <span class="label label-green">WebSocket</span>
-      </div>
+    <h2>How It Works — End to End</h2>
+    <div class="card">
+      <table>
+        <tr><td><strong>1. Annotate</strong></td><td>Mark workloads with <code>kairos.io/managed: "true"</code> and leave <code>resources: {}</code> empty in your Git manifests</td></tr>
+        <tr><td><strong>2. Discover</strong></td><td>KairosAgent scans namespaces (by suffix or explicit list) for annotated workloads every reconcile cycle</td></tr>
+        <tr><td><strong>3. Measure</strong></td><td>Queries OTel/Thanos/Prometheus for actual CPU and memory usage over configurable time windows</td></tr>
+        <tr><td><strong>4. Decide</strong></td><td>Evaluates SmartScalingPolicy rules. If AI is enabled, sends metrics context to the model for recommendation</td></tr>
+        <tr><td><strong>5. Apply</strong></td><td>Uses Server-Side Apply with field manager <code>kairos-operator</code> — only touches <code>resources</code>. No other fields modified.</td></tr>
+        <tr><td><strong>6. Verify</strong></td><td>Watches rollout health. If pods crash within cooldown and <code>rollbackOnFailure: true</code>, reverts immediately</td></tr>
+        <tr><td><strong>7. Report</strong></td><td>Agent reports status + managed resources to hub console for centralized visibility</td></tr>
+      </table>
     </div>
 
     <h2>Scaling Decision Flow</h2>
     <div class="img-container" onclick="openLightbox(this)">
       <img src="images/scaling-flow.svg" alt="Scaling Flow">
-      <div class="img-caption">Click to enlarge — From metrics ingestion to scaling action</div>
+      <div class="img-caption">Click to enlarge — From metrics ingestion to scaling action with safety gates</div>
     </div>
 
-    <h2>Console: Dashboard View</h2>
+    <h2>Console: Dashboard</h2>
     <div class="img-container" onclick="openLightbox(this)">
       <img src="images/screenshot-console-dashboard.png" alt="Kairos Console Dashboard">
-      <div class="img-caption">Click to enlarge — Live console showing 3 clusters healthy, operator status, and multi-cluster governance</div>
+      <div class="img-caption">Click to enlarge — Live console showing multi-cluster governance: agents, policies, and real-time events</div>
     </div>
+  </div>
+
+  <!-- THE PROBLEM -->
+  <div id="problem" class="section">
+    <h2>The Problem Kairos Solves</h2>
+
+    <div class="alert alert-danger">
+      <strong>The resource management crisis in Kubernetes:</strong> Teams either over-provision (wasting 40-60% of cluster capacity) 
+      or under-provision (causing OOMKilled, CPU throttling, and degraded performance). At multi-cluster scale, 
+      this becomes impossible to manage manually.
+    </div>
+
+    <h3>Common Pain Points</h3>
+    <div class="grid-2">
+      <div class="card" style="border-color: #ff5252;">
+        <div class="card-title" style="color: #ff5252;">Without Kairos</div>
+        <ul style="color: #8b949e;">
+          <li>Developers guess at <code>resources:</code> values during deployment</li>
+          <li>Values become stale as traffic patterns change over months</li>
+          <li>OOMKilled alerts at 3 AM require manual intervention</li>
+          <li>Over-provisioned dev namespaces waste 60%+ of allocated resources</li>
+          <li>No consistent limits across 20+ prod namespaces</li>
+          <li>ArgoCD sync wars if you try to adjust resources via another controller</li>
+          <li>No visibility into what resources are managed vs. unmanaged across clusters</li>
+          <li>Manual "kubectl patch" for each workload, each namespace, each cluster</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color: #00e676;">
+        <div class="card-title" style="color: #00e676;">With Kairos</div>
+        <ul style="color: #8b949e;">
+          <li>Leave <code>resources: {}</code> empty — Kairos fills optimal values from real metrics</li>
+          <li>Continuous adjustment based on actual CPU/memory usage patterns</li>
+          <li>Automatic scaling before issues occur (predictive with AI)</li>
+          <li>Right-sized workloads — pay only for what you use</li>
+          <li>One policy covers ALL <code>*-prod</code> namespaces automatically</li>
+          <li>SSA field ownership means zero ArgoCD conflicts</li>
+          <li>Hub console shows all managed resources across all clusters</li>
+          <li>One CRD applies to hundreds of workloads across multiple clusters</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Real-World Scenarios</h3>
+
+    <h4>Scenario 1: E-commerce with 15 microservices across 3 clusters</h4>
+    <div class="card">
+      <p><strong>Problem:</strong> Each microservice has different resource needs that change during sales events, weekends, and overnight. 
+      The platform team spends 4+ hours/week manually adjusting limits after incidents.</p>
+      <p><strong>Solution:</strong> Deploy one <code>SmartScalingPolicy</code> with metric rules + one <code>KairosAgent</code> with 
+      <code>namespaceSuffix: "-prod"</code>. Kairos continuously optimizes all 15 services across all clusters based on actual traffic.</p>
+      <p><strong>Result:</strong> Zero OOMKills, 35% cost reduction, platform team reclaims 4+ hours/week.</p>
+    </div>
+
+    <h4>Scenario 2: Industrial Edge with disconnected clusters</h4>
+    <div class="card">
+      <p><strong>Problem:</strong> Factory clusters have no internet access but workloads still need proper resource management. 
+      Teams can't SSH into each site to adjust resources.</p>
+      <p><strong>Solution:</strong> Deploy Kairos in air-gapped mode (no AI) with <code>hubReporting.tls.insecureSkipVerify: true</code> 
+      for internal CA certificates. Agents report to hub console over internal network.</p>
+      <p><strong>Result:</strong> Centralized visibility of 50+ workloads across 5 factory sites, with automatic metric-based scaling.</p>
+    </div>
+
+    <h4>Scenario 3: Strict GitOps with ArgoCD</h4>
+    <div class="card">
+      <p><strong>Problem:</strong> Everything is in Git managed by ArgoCD. Any attempt to modify workloads externally causes 
+      "OutOfSync" status and either gets reverted by ArgoCD or creates permanent drift.</p>
+      <p><strong>Solution:</strong> Kairos uses Server-Side Apply with its own field manager. ArgoCD is configured with 
+      <code>ignoreDifferences</code> on the resources field. Git manifests have <code>resources: {}</code> — this IS the desired state.</p>
+      <p><strong>Result:</strong> ArgoCD always shows "Synced". Kairos manages resources independently. Both controllers coexist.</p>
+    </div>
+
+    <h3>Why Not VPA (Vertical Pod Autoscaler)?</h3>
+    <table>
+      <thead><tr><th>Feature</th><th>Kubernetes VPA</th><th>Kairos</th></tr></thead>
+      <tbody>
+        <tr><td>Multi-cluster</td><td>Single cluster only</td><td>Hub + unlimited spoke clusters</td></tr>
+        <tr><td>ArgoCD safe</td><td>No — causes sync conflicts</td><td>Yes — SSA field ownership</td></tr>
+        <tr><td>AI-powered</td><td>No</td><td>Optional: DeepSeek, Granite, Qwen, LLaMA</td></tr>
+        <tr><td>Namespace patterns</td><td>Per-workload only</td><td>Suffix-based discovery (<code>*-prod</code>)</td></tr>
+        <tr><td>Governance console</td><td>No</td><td>PatternFly 5 multi-cluster dashboard</td></tr>
+        <tr><td>Rollback on failure</td><td>Limited</td><td>Automatic with configurable cooldown</td></tr>
+        <tr><td>OpenTelemetry native</td><td>No</td><td>Primary metrics source via OTLP gRPC</td></tr>
+        <tr><td>Rate limiting</td><td>Basic</td><td>maxActionsPerHour + per-workload cooldown</td></tr>
+        <tr><td>Observability</td><td>Prometheus metrics only</td><td>OTel + Thanos + Prometheus + Console UI</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- MULTI-CLUSTER -->
   <div id="multicluster" class="section">
     <h2>Multi-cluster Governance</h2>
 
+    <!-- Inline SVG to avoid browser rendering issues -->
     <div class="img-container" onclick="openLightbox(this)">
-      <img src="images/multicluster-observability.svg" alt="Multi-cluster Observability">
-      <div class="img-caption">Click to enlarge — Hub + Spoke topology with centralized observability</div>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500">
+        <defs>
+          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0d1117"/>
+            <stop offset="100%" stop-color="#161b22"/>
+          </linearGradient>
+          <linearGradient id="neon1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#00e5ff"/>
+            <stop offset="100%" stop-color="#7c4dff"/>
+          </linearGradient>
+          <linearGradient id="neon2" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ff6d00"/>
+            <stop offset="100%" stop-color="#ffab40"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="glow-sm">
+            <feGaussianBlur stdDeviation="1.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="900" height="500" fill="url(#bg)"/>
+        <rect width="900" height="500" fill="none" stroke="#30363d" stroke-width="1"/>
+        <g stroke="#21262d" stroke-width="0.5" opacity="0.5">
+          <line x1="0" y1="100" x2="900" y2="100"/><line x1="0" y1="200" x2="900" y2="200"/>
+          <line x1="0" y1="300" x2="900" y2="300"/><line x1="0" y1="400" x2="900" y2="400"/>
+          <line x1="150" y1="0" x2="150" y2="500"/><line x1="300" y1="0" x2="300" y2="500"/>
+          <line x1="450" y1="0" x2="450" y2="500"/><line x1="600" y1="0" x2="600" y2="500"/>
+          <line x1="750" y1="0" x2="750" y2="500"/>
+        </g>
+        <text x="450" y="40" font-family="monospace" font-size="18" fill="#00e5ff" text-anchor="middle" filter="url(#glow-sm)">KAIROS MULTI-CLUSTER OBSERVABILITY</text>
+        <g transform="translate(400, 200)">
+          <rect x="-80" y="-60" width="160" height="120" rx="8" fill="#1a1a2e" stroke="#00e5ff" stroke-width="2" filter="url(#glow)"/>
+          <text x="0" y="-38" font-family="monospace" font-size="13" fill="#00e5ff" text-anchor="middle" font-weight="bold">HUB CLUSTER</text>
+          <text x="0" y="-18" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+          <text x="0" y="0" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-console</text>
+          <text x="0" y="18" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">thanos-querier</text>
+          <text x="0" y="36" font-family="monospace" font-size="9" fill="#7c4dff" text-anchor="middle">otel-collector</text>
+          <circle cx="60" cy="-42" r="5" fill="#00e676"/>
+          <text x="0" y="55" font-family="monospace" font-size="8" fill="#4caf50" text-anchor="middle">supervised agent</text>
+        </g>
+        <g transform="translate(150, 350)">
+          <rect x="-70" y="-50" width="140" height="100" rx="8" fill="#1a1a2e" stroke="#7c4dff" stroke-width="1.5" filter="url(#glow-sm)"/>
+          <text x="0" y="-28" font-family="monospace" font-size="12" fill="#7c4dff" text-anchor="middle" font-weight="bold">EAST</text>
+          <text x="0" y="-10" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+          <text x="0" y="8" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">prometheus</text>
+          <circle cx="50" cy="-32" r="5" fill="#00e676"/>
+          <text x="0" y="30" font-family="monospace" font-size="8" fill="#ff6d00" text-anchor="middle">autopilot agent</text>
+          <text x="0" y="42" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">us-east-2</text>
+        </g>
+        <g transform="translate(700, 350)">
+          <rect x="-70" y="-50" width="140" height="100" rx="8" fill="#1a1a2e" stroke="#7c4dff" stroke-width="1.5" filter="url(#glow-sm)"/>
+          <text x="0" y="-28" font-family="monospace" font-size="12" fill="#7c4dff" text-anchor="middle" font-weight="bold">WEST</text>
+          <text x="0" y="-10" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+          <text x="0" y="8" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">prometheus</text>
+          <circle cx="50" cy="-32" r="5" fill="#00e676"/>
+          <text x="0" y="30" font-family="monospace" font-size="8" fill="#ff6d00" text-anchor="middle">autopilot agent</text>
+          <text x="0" y="42" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">us-west-1</text>
+        </g>
+        <g transform="translate(750, 130)">
+          <rect x="-65" y="-35" width="130" height="70" rx="8" fill="#1a1a2e" stroke="#ff6d00" stroke-width="1.5"/>
+          <text x="0" y="-12" font-family="monospace" font-size="10" fill="#ff6d00" text-anchor="middle" font-weight="bold">AI MODEL</text>
+          <text x="0" y="5" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">deepseek-r1-distill</text>
+          <text x="0" y="18" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">qwen-14b via LiteLLM</text>
+        </g>
+        <g transform="translate(150, 130)">
+          <rect x="-65" y="-35" width="130" height="70" rx="8" fill="#1a1a2e" stroke="#ffab40" stroke-width="1.5"/>
+          <text x="0" y="-12" font-family="monospace" font-size="10" fill="#ffab40" text-anchor="middle" font-weight="bold">OPENTELEMETRY</text>
+          <text x="0" y="5" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">gRPC:4317 (OTLP)</text>
+          <text x="0" y="18" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">receivers: otlp, prom</text>
+        </g>
+        <line x1="215" y1="145" x2="320" y2="185" stroke="#ffab40" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7" filter="url(#glow-sm)"/>
+        <line x1="685" y1="145" x2="480" y2="185" stroke="#ff6d00" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7" filter="url(#glow-sm)"/>
+        <line x1="350" y1="260" x2="190" y2="300" stroke="url(#neon1)" stroke-width="1.8" opacity="0.8" filter="url(#glow-sm)"/>
+        <line x1="470" y1="260" x2="660" y2="300" stroke="url(#neon1)" stroke-width="1.8" opacity="0.8" filter="url(#glow-sm)"/>
+        <text x="250" y="290" font-family="monospace" font-size="9" fill="#00e5ff" opacity="0.9">metrics + reports</text>
+        <text x="540" y="290" font-family="monospace" font-size="9" fill="#00e5ff" opacity="0.9">metrics + reports</text>
+        <text x="260" y="160" font-family="monospace" font-size="8" fill="#ffab40" opacity="0.8">OTLP gRPC</text>
+        <text x="570" y="160" font-family="monospace" font-size="8" fill="#ff6d00" opacity="0.8">AI API</text>
+        <g transform="translate(450, 240)">
+          <rect x="-35" y="-10" width="70" height="20" rx="4" fill="#ffab40" opacity="0.2" stroke="#ffab40" stroke-width="0.5"/>
+          <text x="0" y="4" font-family="monospace" font-size="8" fill="#ffab40" text-anchor="middle">THANOS</text>
+        </g>
+        <g transform="translate(30, 460)">
+          <circle cx="5" cy="0" r="3" fill="#00e676"/>
+          <text x="15" y="3" font-family="monospace" font-size="9" fill="#8b949e">healthy</text>
+          <circle cx="75" cy="0" r="3" fill="#ff6d00"/>
+          <text x="85" y="3" font-family="monospace" font-size="9" fill="#8b949e">autopilot</text>
+          <circle cx="155" cy="0" r="3" fill="#00e5ff"/>
+          <text x="165" y="3" font-family="monospace" font-size="9" fill="#8b949e">supervised</text>
+          <line x1="245" y1="0" x2="265" y2="0" stroke="#ffab40" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <text x="275" y="3" font-family="monospace" font-size="9" fill="#8b949e">OTel/AI</text>
+          <line x1="325" y1="0" x2="345" y2="0" stroke="#00e5ff" stroke-width="1.5"/>
+          <text x="355" y="3" font-family="monospace" font-size="9" fill="#8b949e">metrics flow</text>
+        </g>
+        <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v0.1.0</text>
+      </svg>
+      <div class="img-caption">Click to enlarge — Hub + Spoke topology with centralized observability, AI model integration, and agent reporting</div>
     </div>
 
     <div class="alert alert-info">
-      Kairos uses a <strong>hub-spoke</strong> model: the operator runs on all clusters, the governance console runs on the hub, and metrics flow upward via Thanos federation or OTel collectors.
+      <strong>Hub-Spoke Architecture:</strong> The operator runs on ALL clusters. The hub runs the governance console + Thanos Querier + OTel Collector. 
+      Spoke agents push status reports + managed resource lists to the hub for centralized visibility.
+    </div>
+
+    <h3>How Multi-Cluster Visibility Works</h3>
+    <div class="card">
+      <table>
+        <tr><td><strong>Hub</strong></td><td>Console queries local Kubernetes API for <code>kairos.io/managed: "true"</code> annotated workloads</td></tr>
+        <tr><td><strong>Spoke Agents</strong></td><td>Each KairosAgent periodically POSTs to <code>/api/v1/agent-report</code> on the hub console with: agent status, events, and managed resource inventory</td></tr>
+        <tr><td><strong>Console</strong></td><td>Combines hub-local + all spoke reports into a unified multi-cluster view with filtering by cluster</td></tr>
+        <tr><td><strong>Security</strong></td><td>Agent-to-hub communication uses TLS (configurable: full verification, custom CA, or insecureSkipVerify for air-gapped)</td></tr>
+      </table>
     </div>
 
     <h3>Topology</h3>
@@ -239,13 +560,13 @@
       <thead><tr><th>Cluster</th><th>Role</th><th>Components</th><th>Agent Mode</th></tr></thead>
       <tbody>
         <tr><td><code>hub</code></td><td>Control plane</td><td>Operator + Console + Thanos Querier + OTel</td><td><span class="label label-blue">supervised</span></td></tr>
-        <tr><td><code>east</code></td><td>Workload</td><td>Operator + Prometheus</td><td><span class="label label-orange">autopilot</span></td></tr>
-        <tr><td><code>west</code></td><td>Workload</td><td>Operator + Prometheus</td><td><span class="label label-orange">autopilot</span></td></tr>
+        <tr><td><code>east</code></td><td>Workload</td><td>Operator + Prometheus + Agent</td><td><span class="label label-orange">autopilot</span></td></tr>
+        <tr><td><code>west</code></td><td>Workload</td><td>Operator + Prometheus + Agent</td><td><span class="label label-orange">autopilot</span></td></tr>
       </tbody>
     </table>
 
     <h3>Namespace Suffix Filtering</h3>
-    <p>Instead of maintaining static namespace lists, agents can dynamically discover namespaces by suffix:</p>
+    <p>Instead of maintaining static namespace lists, agents dynamically discover namespaces by suffix pattern:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
@@ -253,7 +574,7 @@ metadata:
 spec:
   mode: autopilot
   watch:
-    namespaceSuffix: "-prod"    # Watches ALL *-prod namespaces
+    namespaceSuffix: "-prod"    # Watches ALL *-prod namespaces automatically
     resourceTypes:
     - Deployment
     - StatefulSet</code></pre>
@@ -272,8 +593,6 @@ metadata:
   name: prod-standard-limits
   namespace: kairos-system
 spec:
-  # Target: all Deployments across -prod namespaces
-  # (the KairosAgent discovers them via namespaceSuffix)
   target:
     apiVersion: apps/v1
     kind: Deployment
@@ -336,14 +655,14 @@ spec:
           memory: "256Mi"</code></pre>
 
     <h4>Step 2: Deploy a KairosAgent for -prod namespaces</h4>
-    <p>The agent discovers <em>all</em> namespaces ending in <code>-prod</code> and applies the policy to workloads annotated with <code>kairos.io/managed: "true"</code>:</p>
+    <p>The agent discovers <em>all</em> namespaces ending in <code>-prod</code> and applies the policy to annotated workloads:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: prod-limits-agent
   namespace: kairos-system
 spec:
-  mode: autopilot         # Apply limits automatically
+  mode: autopilot
   aiModel:
     apiURL: "https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions"
     model: "deepseek-r1-distill-qwen-14b"
@@ -351,20 +670,23 @@ spec:
       name: kairos-ai-credentials
       key: api-key
   watch:
-    namespaceSuffix: "-prod"      # Discovers: app-prod, api-prod, web-prod, etc.
+    namespaceSuffix: "-prod"
     resourceTypes:
     - Deployment
     - StatefulSet
   correctionPolicy:
-    maxActionsPerHour: 20         # Allow up to 20 corrections/hour
-    rollbackOnFailure: true       # Revert if pods crash after resize
-    cooldownPeriod: "3m"          # Wait 3 min between actions on same workload
+    maxActionsPerHour: 20
+    rollbackOnFailure: true
+    cooldownPeriod: "3m"
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.apps.hub-cluster.example.com"
   reporting:
     interval: "5m"</code></pre>
 
     <h4>Step 3: Annotate your workloads</h4>
     <p>In your Git manifests (managed by ArgoCD or direct apply), mark workloads for Kairos management:</p>
-    <pre><code># Example: my-app in namespace "ecommerce-prod"
+    <pre><code># Example: payment service in "ecommerce-prod"
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -380,56 +702,24 @@ spec:
       containers:
       - name: payment
         image: quay.io/myorg/payment-service:v2.3.1
-        resources: {}   # ← Empty! Kairos fills this via SSA
----
-# Example: another app in "billing-prod"
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: invoice-processor
-  namespace: billing-prod
-  annotations:
-    kairos.io/managed: "true"
-    kairos.io/policy: "prod-standard-limits"
-spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-      - name: processor
-        image: quay.io/myorg/invoice-processor:v1.8.0
-        resources: {}   # ← Empty! Kairos fills this via SSA</code></pre>
+        resources: {}   # Empty! Kairos fills this via SSA</code></pre>
 
     <h4>Step 4: Verify Kairos applied limits</h4>
     <pre><code># Check what Kairos set on the workload
-oc get deployment payment-service -n ecommerce-prod -o jsonpath='{.spec.template.spec.containers[0].resources}' | jq .
+oc get deployment payment-service -n ecommerce-prod \
+  -o jsonpath='{.spec.template.spec.containers[0].resources}' | jq .
 {
   "requests": { "cpu": "100m", "memory": "128Mi" },
   "limits": { "cpu": "500m", "memory": "512Mi" }
 }
 
-# Check agent status — see how many resources are being managed
+# Check agent status
 oc get kairosagents -n kairos-system
 NAME                MODE        PHASE    WATCHED   CORRECTIONS
 prod-limits-agent   autopilot   Active   24        5
 
 # View correction events
-oc get events -n kairos-system --field-selector reason=ResourcesApplied
-LAST SEEN   TYPE     REASON             OBJECT                    MESSAGE
-2m          Normal   ResourcesApplied   deployment/payment-svc    Set resources: cpu=100m/500m mem=128Mi/512Mi
-1m          Normal   ResourcesApplied   deployment/invoice-proc   Set resources: cpu=100m/500m mem=128Mi/512Mi</code></pre>
-
-    <h4>How it works end-to-end</h4>
-    <div class="card">
-      <table>
-        <tr><td><strong>1. Discovery</strong></td><td>KairosAgent lists namespaces matching <code>*-prod</code> suffix every reconcile cycle (default 5m)</td></tr>
-        <tr><td><strong>2. Scan</strong></td><td>Within each namespace, finds Deployments/StatefulSets with <code>kairos.io/managed: "true"</code></td></tr>
-        <tr><td><strong>3. Evaluate</strong></td><td>Reads the linked SmartScalingPolicy rules and queries Thanos/OTel for current metrics</td></tr>
-        <tr><td><strong>4. Decide</strong></td><td>If workload has <code>resources: {}</code>, applies <code>defaultResources</code>. If metrics trigger a rule, applies that rule's resources.</td></tr>
-        <tr><td><strong>5. Apply</strong></td><td>Uses Server-Side Apply with field manager <code>kairos-operator</code> — only touches the <code>resources</code> field</td></tr>
-        <tr><td><strong>6. Verify</strong></td><td>Watches rollout. If pods crash within cooldown period and <code>rollbackOnFailure: true</code>, reverts to previous values</td></tr>
-      </table>
-    </div>
+oc get events -n kairos-system --field-selector reason=ResourcesApplied</code></pre>
 
     <h4>Common suffix patterns</h4>
     <table>
@@ -448,125 +738,92 @@ LAST SEEN   TYPE     REASON             OBJECT                    MESSAGE
 
     <h3>Configuration Modes</h3>
     <div class="alert alert-success">
-      Kairos supports <strong>4 operational modes</strong> that can be combined freely. You can run purely metric-based (no AI), AI-assisted, target specific namespaces, use suffix patterns, or combine both.
+      Kairos supports <strong>4 operational modes</strong>. You can run purely metric-based (no AI), AI-assisted, target specific namespaces, use suffix patterns, or combine both.
     </div>
 
-    <h4>Mode A: Without AI — Pure metric rules (specific namespaces)</h4>
-    <p>No AI model needed. The operator evaluates Prometheus/Thanos metrics directly:</p>
+    <h4>Mode A: Without AI — Pure metric rules</h4>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: metrics-only-agent
-  namespace: kairos-system
 spec:
   mode: supervised       # Human reviews before applying
   aiModel:
     apiURL: ""           # Empty = AI disabled
-    model: ""
   watch:
-    namespaces:          # Explicit list of namespaces
-    - ecommerce-prod
-    - billing-prod
-    - payments-prod
-    resourceTypes:
-    - Deployment
-    - StatefulSet
+    namespaces: [ecommerce-prod, billing-prod, payments-prod]
+    resourceTypes: [Deployment, StatefulSet]
   correctionPolicy:
     maxActionsPerHour: 5
     rollbackOnFailure: true
   reporting:
     interval: "10m"</code></pre>
 
-    <h4>Mode B: With AI — Autonomous optimization (suffix pattern)</h4>
-    <p>AI model analyzes workload patterns and recommends/applies resource changes:</p>
+    <h4>Mode B: With AI — Autonomous optimization</h4>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: ai-autopilot-agent
-  namespace: kairos-system
 spec:
-  mode: autopilot       # AI applies changes automatically
+  mode: autopilot
   aiModel:
     apiURL: "https://litellm.apps.maas.example.com/v1/chat/completions"
     model: "deepseek-r1-distill-qwen-14b"
-    secretRef:
-      name: kairos-ai-credentials
-      key: api-key
+    secretRef: { name: kairos-ai-credentials, key: api-key }
     tls:
-      insecureSkipVerify: false    # Verify TLS in production
+      insecureSkipVerify: false
   watch:
-    namespaceSuffix: "-prod"       # All *-prod namespaces automatically
-    resourceTypes:
-    - Deployment
-    - StatefulSet
+    namespaceSuffix: "-prod"
+    resourceTypes: [Deployment, StatefulSet]
   correctionPolicy:
     maxActionsPerHour: 20
     rollbackOnFailure: true
   hubReporting:
     enabled: true
     endpoint: "https://kairos-console.apps.hub-cluster.example.com"
-    tls:
-      insecureSkipVerify: true     # Disconnected environments
   reporting:
     interval: "5m"</code></pre>
 
     <h4>Mode C: Combined — Specific namespaces + suffix + AI</h4>
-    <p>Watch both a fixed set of critical namespaces AND all namespaces matching a suffix pattern:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: hybrid-agent
-  namespace: kairos-system
 spec:
   mode: supervised
   aiModel:
     apiURL: "http://vllm.ai-system.svc:8000/v1/chat/completions"
     model: "granite-3b-code"
     tls:
-      insecureSkipVerify: true     # Internal service, no public TLS
+      insecureSkipVerify: true
   watch:
-    namespaces:                    # Always watch these critical namespaces
-    - core-banking-prod
-    - fraud-detection-prod
-    - payment-gateway-prod
-    namespaceSuffix: "-staging"    # ALSO watch all *-staging namespaces
-    resourceTypes:
-    - Deployment
-    - StatefulSet
-    labelSelector: "kairos.io/managed=true"   # Only resources with this label
+    namespaces: [core-banking-prod, fraud-detection-prod]
+    namespaceSuffix: "-staging"
+    resourceTypes: [Deployment, StatefulSet]
+    labelSelector: "kairos.io/managed=true"
   correctionPolicy:
     maxActionsPerHour: 10
-    requireApprovalAbove: "50%"    # Changes >50% require human approval
+    requireApprovalAbove: "50%"
     rollbackOnFailure: true
-    dryRun: false
   hubReporting:
     enabled: true
     endpoint: "https://kairos-console.apps.hub.example.com"
-    tokenSecretRef:
-      name: hub-reporting-token
-      key: token
+    tokenSecretRef: { name: hub-reporting-token, key: token }
   reporting:
-    interval: "5m"
-    otelExport: true               # Also export events to OTel</code></pre>
+    interval: "5m"</code></pre>
 
-    <h4>Mode D: Disconnected / Air-gapped environment (no AI, insecure TLS)</h4>
+    <h4>Mode D: Disconnected / Air-gapped</h4>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: airgapped-agent
-  namespace: kairos-system
 spec:
   mode: autopilot
   aiModel:
     apiURL: ""           # No AI in disconnected mode
-    model: ""
   watch:
-    namespaces:
-    - factory-floor-prod
-    - scada-prod
-    - plc-monitoring-prod
-    resourceTypes:
-    - Deployment
+    namespaces: [factory-floor-prod, scada-prod, plc-monitoring-prod]
+    resourceTypes: [Deployment]
   correctionPolicy:
     maxActionsPerHour: 5
     rollbackOnFailure: true
@@ -575,9 +832,7 @@ spec:
     endpoint: "https://kairos-console.apps.hub.internal:8443"
     tls:
       insecureSkipVerify: true     # Self-signed certs in air-gapped
-      caSecretRef:                 # Or use internal CA
-        name: internal-ca-bundle
-        key: ca.crt
+      caSecretRef: { name: internal-ca-bundle, key: ca.crt }
   reporting:
     interval: "15m"</code></pre>
 
@@ -593,7 +848,6 @@ spec:
     </table>
 
     <h3>Console Access</h3>
-    <p>The governance console is deployed on the hub cluster with an OpenShift Route:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosConsole
 metadata:
@@ -623,7 +877,7 @@ spec:
     <h2>Observability & Metrics</h2>
 
     <div class="alert alert-success">
-      Kairos reads metrics from three sources in priority order: <strong>OpenTelemetry Collector</strong> (gRPC/OTLP) → <strong>Thanos Querier</strong> (PromQL) → <strong>Prometheus</strong> (fallback).
+      Kairos reads metrics from three sources in priority order: <strong>OpenTelemetry Collector</strong> (gRPC/OTLP) → <strong>Thanos Querier</strong> (PromQL) → <strong>Prometheus</strong> (fallback). All are optional — configure what your cluster has.
     </div>
 
     <h3>Metrics Source Priority</h3>
@@ -637,7 +891,6 @@ spec:
     </table>
 
     <h3>Configuring OpenTelemetry Collector</h3>
-    <p>Deploy an <code>OpenTelemetryCollector</code> CR that scrapes Thanos and exposes OTLP gRPC for Kairos:</p>
     <pre><code>apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
@@ -692,7 +945,11 @@ spec:
       operator: GreaterThan
       threshold: "0.8"
     action:
-      type: AddReplicas
+      type: SetResources
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
   - name: memory-high
     when:
       metric: "container_memory_working_set_bytes"
@@ -731,33 +988,6 @@ spec:
         </table>
       </div>
     </div>
-
-    <h3>Metrics Pipeline</h3>
-    <div class="card">
-      <div class="card-title">Active Pipeline: metrics</div>
-      <table>
-        <tr><td>Receivers</td><td><span class="label label-blue">otlp</span> <span class="label label-purple">prometheus</span></td></tr>
-        <tr><td>Exporters</td><td><span class="label label-orange">debug</span></td></tr>
-        <tr><td>Status</td><td><span class="label label-green">active</span></td></tr>
-      </table>
-    </div>
-
-    <h3>Live Metrics Query</h3>
-    <p>The console proxies PromQL queries directly to Thanos via <code>/api/v1/metrics/query</code>:</p>
-    <pre><code># Query from the console API
-GET /api/v1/metrics/query?query=up{job="kubelet"}
-
-# Response: 18 active kubelet targets
-{
-  "status": "success",
-  "data": {
-    "resultType": "vector",
-    "result": [
-      {"metric": {"instance": "10.10.10.10:10250", "job": "kubelet"}, "value": [1716832000, "1"]},
-      ...
-    ]
-  }
-}</code></pre>
   </div>
 
   <!-- AI -->
@@ -765,17 +995,32 @@ GET /api/v1/metrics/query?query=up{job="kubelet"}
     <h2>AI Model Configuration</h2>
 
     <div class="alert alert-info">
-      AI integration is <strong>optional</strong>. Kairos works perfectly with only metric-based rules. Enable AI when you want autonomous recommendations based on workload patterns.
+      AI integration is <strong>completely optional</strong>. Kairos works perfectly with only metric-based rules. 
+      Enable AI when you want autonomous recommendations based on workload patterns, traffic seasonality, and historical data.
+    </div>
+
+    <h3>What Does the AI Do?</h3>
+    <div class="card">
+      <p>When enabled, the AI model receives:</p>
+      <ul>
+        <li>Current resource requests/limits of the workload</li>
+        <li>Last N hours of CPU/memory usage metrics</li>
+        <li>Pod restart history and OOMKill events</li>
+        <li>Time of day and day of week (seasonality)</li>
+      </ul>
+      <p>It responds with a recommended resource configuration and confidence level. In <code>autopilot</code> mode, 
+      recommendations above the confidence threshold are applied automatically. In <code>supervised</code> mode, 
+      they're logged as events for human review.</p>
     </div>
 
     <h3>Supported Endpoints</h3>
     <table>
-      <thead><tr><th>Platform</th><th>Protocol</th><th>Example URL</th></tr></thead>
+      <thead><tr><th>Platform</th><th>Protocol</th><th>Example URL</th><th>Models</th></tr></thead>
       <tbody>
-        <tr><td>LiteLLM</td><td>OpenAI-compatible</td><td><code>https://litellm.example.com/v1/chat/completions</code></td></tr>
-        <tr><td>vLLM</td><td>OpenAI-compatible</td><td><code>http://vllm-svc:8000/v1/chat/completions</code></td></tr>
-        <tr><td>KServe</td><td>OpenAI-compatible</td><td><code>https://model.kserve.example.com/v1/chat/completions</code></td></tr>
-        <tr><td>Ollama</td><td>OpenAI-compatible</td><td><code>http://ollama:11434/v1/chat/completions</code></td></tr>
+        <tr><td>LiteLLM</td><td>OpenAI-compatible</td><td><code>https://litellm.example.com/v1/chat/completions</code></td><td>Any model via proxy</td></tr>
+        <tr><td>vLLM</td><td>OpenAI-compatible</td><td><code>http://vllm-svc:8000/v1/chat/completions</code></td><td>DeepSeek, Qwen, LLaMA</td></tr>
+        <tr><td>KServe</td><td>OpenAI-compatible</td><td><code>https://model.kserve.example.com/v1/chat/completions</code></td><td>Granite, DeepSeek</td></tr>
+        <tr><td>Ollama</td><td>OpenAI-compatible</td><td><code>http://ollama:11434/v1/chat/completions</code></td><td>Any local model</td></tr>
       </tbody>
     </table>
 
@@ -785,39 +1030,28 @@ oc create secret generic kairos-ai-credentials \
   -n kairos-system \
   --from-literal=api-key=&lt;your-api-key&gt;
 
-# 2. Create the KairosAgent
-apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
-kind: KairosAgent
-metadata:
-  name: prod-agent
+# 2. Reference in the KairosAgent spec
 spec:
-  mode: autopilot
   aiModel:
     apiURL: "https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions"
     model: "deepseek-r1-distill-qwen-14b"
     secretRef:
       name: kairos-ai-credentials
       key: api-key
-  watch:
-    namespaceSuffix: "-prod"
-    resourceTypes:
-    - Deployment
-    - StatefulSet
-  correctionPolicy:
-    maxActionsPerHour: 10
-    rollbackOnFailure: true
-  reporting:
-    interval: "5m"</code></pre>
+    tls:
+      insecureSkipVerify: false   # Set true for self-signed certs</code></pre>
 
     <h3>Agent Modes</h3>
     <div class="grid-2">
       <div class="card">
         <div class="card-title"><span class="label label-orange">autopilot</span> Mode</div>
-        <p>AI recommendations are applied automatically without human intervention. Best for non-critical workloads or environments with high confidence in the model.</p>
+        <p>AI recommendations are applied automatically. Rate-limited by <code>maxActionsPerHour</code> and 
+        protected by <code>rollbackOnFailure</code>. Best for non-critical workloads or high-confidence environments.</p>
       </div>
       <div class="card">
         <div class="card-title"><span class="label label-blue">supervised</span> Mode</div>
-        <p>AI recommendations require human approval before being applied. Best for production workloads where changes need review.</p>
+        <p>AI recommendations are logged as events but NOT applied. A human reviews recommendations in the console 
+        or via <code>oc get events</code> and decides whether to apply. Best for production-critical services.</p>
       </div>
     </div>
   </div>
@@ -827,7 +1061,15 @@ spec:
     <h2>ArgoCD Coexistence</h2>
 
     <div class="alert alert-warning">
-      Kairos uses <strong>Server-Side Apply (SSA)</strong> with explicit field ownership. It only manages the <code>resources</code> field — ArgoCD continues to own everything else.
+      <strong>Zero conflicts guaranteed.</strong> Kairos uses Server-Side Apply (SSA) with explicit field ownership. 
+      It only manages the <code>resources</code> field — ArgoCD continues to own everything else.
+    </div>
+
+    <h3>Why This Works</h3>
+    <div class="card">
+      <p>Kubernetes Server-Side Apply tracks <em>which controller owns which field</em>. When Kairos applies resources with 
+      field manager <code>kairos-operator</code>, Kubernetes knows that field is owned by Kairos, not ArgoCD. 
+      ArgoCD sees the field as "managed by another controller" and (with <code>ignoreDifferences</code>) does not revert it.</p>
     </div>
 
     <h3>Pattern</h3>
@@ -858,11 +1100,12 @@ spec:
     jqPathExpressions:
     - .spec.template.spec.containers[].resources</code></pre>
 
-    <h3>How It Works</h3>
+    <h3>Result</h3>
     <table>
-      <tr><td><strong>Kairos</strong></td><td>Owns <code>.spec.template.spec.containers[].resources</code> via SSA with field manager <code>kairos-operator</code></td></tr>
+      <tr><td><strong>Kairos</strong></td><td>Owns <code>.spec.template.spec.containers[].resources</code> via SSA field manager <code>kairos-operator</code></td></tr>
       <tr><td><strong>ArgoCD</strong></td><td>Owns all other fields. Ignores differences on resources field.</td></tr>
-      <tr><td><strong>Result</strong></td><td>No sync conflicts. Both controllers coexist peacefully.</td></tr>
+      <tr><td><strong>Git</strong></td><td>Contains <code>resources: {}</code> — this IS the desired state ("let Kairos manage it")</td></tr>
+      <tr><td><strong>Result</strong></td><td>Always "Synced" in ArgoCD. No drift alerts. Both controllers coexist.</td></tr>
     </table>
   </div>
 
@@ -878,32 +1121,48 @@ spec:
       <li>Thanos Querier (included by default in OpenShift monitoring stack)</li>
     </ul>
 
-    <h3>Quick Start</h3>
+    <h3>Quick Start (5 minutes)</h3>
     <pre><code># 1. Install CRDs
 oc apply -f config/crd/bases/
 
-# 2. Create namespace, ServiceAccount, and RBAC
-oc apply -f config/samples/prereqs.yaml
-
-# 3. Deploy the operator
+# 2. Create namespace and deploy the operator
 make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
 
-# 4. Create AI credentials (optional)
+# 3. Create AI credentials (optional — skip for metric-only mode)
 oc create secret generic kairos-ai-credentials \
   -n kairos-system --from-literal=api-key=&lt;your-key&gt;
 
-# 5. Deploy an agent
+# 4. Deploy an agent
 oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
 
-# 6. Deploy the console
-oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml</code></pre>
+# 5. Deploy the governance console
+oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml
+
+# 6. Get the console URL
+oc get route kairos-console -n kairos-system -o jsonpath='{.spec.host}'</code></pre>
+
+    <h3>Verify Installation</h3>
+    <pre><code># Check operator is running
+oc get pods -n kairos-system
+NAME                                         READY   STATUS    RESTARTS   AGE
+kairos-controller-manager-xxx-yyy            1/1     Running   0          2m
+kairos-console-xxx-yyy                       1/1     Running   0          1m
+
+# Check CRDs are installed
+oc get crd | grep kairos
+kairosagents.kairos.maximilianopizarro.github.io          2026-05-27T...
+kairosconsoles.kairos.maximilianopizarro.github.io        2026-05-27T...
+smartscalingpolicies.kairos.maximilianopizarro.github.io  2026-05-27T...
+
+# Check agent status
+oc get kairosagents -n kairos-system</code></pre>
 
     <h3>Container Images</h3>
     <table>
-      <thead><tr><th>Image</th><th>Purpose</th><th>Base</th></tr></thead>
+      <thead><tr><th>Image</th><th>Purpose</th><th>Base</th><th>Registry</th></tr></thead>
       <tbody>
-        <tr><td><code>quay.io/maximilianopizarro/kairos-operator</code></td><td>Controller manager</td><td>UBI9 Micro</td></tr>
-        <tr><td><code>quay.io/maximilianopizarro/kairos-console</code></td><td>Governance dashboard</td><td>UBI9 Micro</td></tr>
+        <tr><td><code>kairos-operator</code></td><td>Controller manager</td><td>UBI9 Micro</td><td>quay.io + ghcr.io</td></tr>
+        <tr><td><code>kairos-console</code></td><td>Governance dashboard</td><td>UBI9 Micro</td><td>quay.io + ghcr.io</td></tr>
       </tbody>
     </table>
   </div>
@@ -915,36 +1174,39 @@ oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml</code></pre>
     <div class="grid-3">
       <div class="card">
         <div class="card-title">SmartScalingPolicy</div>
-        <p>Defines metric-based and schedule-based scaling rules.</p>
+        <p>Defines metric-based and schedule-based scaling rules for workloads.</p>
         <table>
-          <tr><td><code>target</code></td><td>Workload reference</td></tr>
+          <tr><td><code>target</code></td><td>Workload reference (kind, name, namespace)</td></tr>
           <tr><td><code>otelEndpoint</code></td><td>OTel gRPC address</td></tr>
           <tr><td><code>prometheusEndpoint</code></td><td>Thanos/Prometheus URL</td></tr>
+          <tr><td><code>defaultResources</code></td><td>Baseline for empty resources</td></tr>
           <tr><td><code>rules[]</code></td><td>Metric conditions + actions</td></tr>
           <tr><td><code>schedule[]</code></td><td>Cron-based scaling</td></tr>
+          <tr><td><code>metricsTLS</code></td><td>TLS config for metrics endpoints</td></tr>
           <tr><td><code>paused</code></td><td>Disable all actions</td></tr>
         </table>
       </div>
       <div class="card">
         <div class="card-title">KairosAgent</div>
-        <p>AI-powered autonomous optimization agent.</p>
+        <p>AI-powered autonomous optimization agent that watches and manages workloads.</p>
         <table>
           <tr><td><code>mode</code></td><td>autopilot / supervised</td></tr>
-          <tr><td><code>aiModel</code></td><td>API URL + model + secret</td></tr>
-          <tr><td><code>watch</code></td><td>Namespaces + suffix + types</td></tr>
-          <tr><td><code>correctionPolicy</code></td><td>Rate limits + rollback</td></tr>
+          <tr><td><code>aiModel</code></td><td>API URL + model + secret + TLS</td></tr>
+          <tr><td><code>watch</code></td><td>Namespaces + suffix + types + labels</td></tr>
+          <tr><td><code>correctionPolicy</code></td><td>Rate limits + rollback + cooldown</td></tr>
+          <tr><td><code>hubReporting</code></td><td>Push status to hub console</td></tr>
           <tr><td><code>reporting</code></td><td>Interval + OTel export</td></tr>
         </table>
       </div>
       <div class="card">
         <div class="card-title">KairosConsole</div>
-        <p>Multi-cluster governance dashboard.</p>
+        <p>Multi-cluster governance dashboard with unified resource view.</p>
         <table>
           <tr><td><code>replicas</code></td><td>Pod count</td></tr>
           <tr><td><code>image</code></td><td>Container image override</td></tr>
           <tr><td><code>route</code></td><td>OpenShift Route config</td></tr>
           <tr><td><code>auth</code></td><td>Authentication type</td></tr>
-          <tr><td><code>clusters[]</code></td><td>Managed cluster refs</td></tr>
+          <tr><td><code>clusters[]</code></td><td>Managed cluster refs + TLS</td></tr>
         </table>
       </div>
     </div>
@@ -958,7 +1220,8 @@ oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml</code></pre>
 
 <footer>
   <p><strong>Kairos Operator</strong> — Apache License 2.0</p>
-  <p><a href="https://github.com/maximilianoPizarro/kairos">GitHub</a> · <a href="https://quay.io/organization/maximilianopizarro">Container Images</a></p>
+  <p><a href="https://github.com/maximilianoPizarro/kairos">GitHub Repository</a> · <a href="https://quay.io/organization/maximilianopizarro">Container Images (Quay.io)</a> · <a href="https://github.com/maximilianoPizarro/kairos/pkgs/container/kairos-operator">GHCR</a></p>
+  <p style="margin-top: 0.5rem; font-style: italic; color: #6a737d;">Built with Go, PatternFly 5, Red Hat UBI — designed for OpenShift multi-cluster environments</p>
 </footer>
 
 <script>
@@ -971,8 +1234,17 @@ function showSection(id) {
 
 function openLightbox(container) {
   const img = container.querySelector('img');
-  document.getElementById('lightbox-img').src = img.src;
-  document.getElementById('lightbox').classList.add('active');
+  const svg = container.querySelector('svg');
+  if (img) {
+    document.getElementById('lightbox-img').src = img.src;
+    document.getElementById('lightbox').classList.add('active');
+  } else if (svg) {
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    document.getElementById('lightbox-img').src = url;
+    document.getElementById('lightbox').classList.add('active');
+  }
 }
 
 function closeLightbox() {

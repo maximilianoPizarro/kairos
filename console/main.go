@@ -47,26 +47,42 @@ type Event struct {
 
 // AgentReport is what spoke agents push to the hub console
 type AgentReport struct {
-	Name             string    `json:"name"`
-	Namespace        string    `json:"namespace"`
-	Cluster          string    `json:"cluster"`
-	Mode             string    `json:"mode"`
-	Phase            string    `json:"phase"`
-	WatchedResources int       `json:"watchedResources"`
-	TotalCorrections int       `json:"totalCorrections"`
-	LastCheck        time.Time `json:"lastCheck"`
-	AIModel          string    `json:"aiModel"`
+	Name             string                   `json:"name"`
+	Namespace        string                   `json:"namespace"`
+	Cluster          string                   `json:"cluster"`
+	Mode             string                   `json:"mode"`
+	Phase            string                   `json:"phase"`
+	WatchedResources int                      `json:"watchedResources"`
+	TotalCorrections int                      `json:"totalCorrections"`
+	LastCheck        time.Time                `json:"lastCheck"`
+	AIModel          string                   `json:"aiModel"`
 	Events           []map[string]interface{} `json:"events,omitempty"`
+	ManagedResources []ManagedResource        `json:"managedResources,omitempty"`
+}
+
+// ManagedResource represents a workload managed by Kairos
+type ManagedResource struct {
+	Name          string `json:"name"`
+	Namespace     string `json:"namespace"`
+	Kind          string `json:"kind"`
+	Cluster       string `json:"cluster"`
+	Policy        string `json:"policy"`
+	Agent         string `json:"agent"`
+	CurrentCPU    string `json:"currentCPU"`
+	CurrentMemory string `json:"currentMemory"`
+	Status        string `json:"status"`
 }
 
 // agentStore holds agent reports from spoke clusters (thread-safe)
 var agentStore = struct {
 	sync.RWMutex
-	agents map[string]*AgentReport
-	events []map[string]interface{}
+	agents    map[string]*AgentReport
+	events    []map[string]interface{}
+	resources []ManagedResource
 }{
-	agents: make(map[string]*AgentReport),
-	events: make([]map[string]interface{}, 0),
+	agents:    make(map[string]*AgentReport),
+	events:    make([]map[string]interface{}, 0),
+	resources: make([]ManagedResource, 0),
 }
 
 type Hub struct {
@@ -404,6 +420,16 @@ func handleAgentReport(w http.ResponseWriter, r *http.Request) {
 			agentStore.events = agentStore.events[len(agentStore.events)-100:]
 		}
 	}
+	// Store managed resources from the report (replace per-cluster)
+	if len(report.ManagedResources) > 0 {
+		filtered := make([]ManagedResource, 0)
+		for _, r := range agentStore.resources {
+			if r.Cluster != report.Cluster {
+				filtered = append(filtered, r)
+			}
+		}
+		agentStore.resources = append(filtered, report.ManagedResources...)
+	}
 	agentStore.Unlock()
 
 	log.Printf("Agent report received: %s/%s (cluster=%s, mode=%s, watched=%d)",
@@ -527,121 +553,104 @@ var startTime = time.Now()
 func handleManagedResources(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	var allResources []ManagedResource
+
+	// 1. Get resources from spoke clusters (reported via agent-report)
+	agentStore.RLock()
+	allResources = append(allResources, agentStore.resources...)
+	agentStore.RUnlock()
+
+	// 2. Get local (hub) resources from Kubernetes API
 	token := getServiceAccountToken()
 	kubeHost := os.Getenv("KUBERNETES_SERVICE_HOST")
 	kubePort := os.Getenv("KUBERNETES_SERVICE_PORT")
 
-	if kubeHost == "" || token == "" {
-		// Not running in-cluster, return sample data
-		resources := []map[string]interface{}{
-			{"name": "sensor-gateway", "namespace": "factory-prod", "kind": "Deployment", "cluster": "east", "policy": "prod-standard-limits", "agent": "east-industrial-agent", "currentCPU": "500m", "currentMemory": "512Mi", "status": "managed"},
-			{"name": "plc-connector", "namespace": "factory-prod", "kind": "Deployment", "cluster": "east", "policy": "prod-standard-limits", "agent": "east-industrial-agent", "currentCPU": "200m", "currentMemory": "256Mi", "status": "managed"},
-			{"name": "mqtt-broker", "namespace": "iot-prod", "kind": "StatefulSet", "cluster": "west", "policy": "prod-standard-limits", "agent": "west-edge-agent", "currentCPU": "300m", "currentMemory": "512Mi", "status": "managed"},
-			{"name": "data-ingestion", "namespace": "telemetry-prod", "kind": "Deployment", "cluster": "west", "policy": "prod-standard-limits", "agent": "west-edge-agent", "currentCPU": "400m", "currentMemory": "384Mi", "status": "managed"},
-			{"name": "kairos-console", "namespace": "kairos-system", "kind": "Deployment", "cluster": "hub", "policy": "demo-policy", "agent": "hub-agent", "currentCPU": "100m", "currentMemory": "128Mi", "status": "managed"},
+	if kubeHost != "" && token != "" {
+		apiBase := fmt.Sprintf("https://%s:%s", kubeHost, kubePort)
+		client := &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
 		}
 
-		// Merge managed resources reported by spoke agents
-		agentStore.RLock()
-		for _, report := range agentStore.agents {
-			if report.WatchedResources > 0 {
-				// Already have from events
+		for _, kind := range []string{"deployments", "statefulsets"} {
+			url := fmt.Sprintf("%s/apis/apps/v1/%s", apiBase, kind)
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				continue
 			}
-		}
-		agentStore.RUnlock()
+			req.Header.Set("Authorization", "Bearer "+token)
 
-		json.NewEncoder(w).Encode(resources)
-		return
-	}
+			resp, err := client.Do(req)
+			if err != nil {
+				continue
+			}
 
-	// In-cluster: query Kubernetes API for annotated resources
-	apiBase := fmt.Sprintf("https://%s:%s", kubeHost, kubePort)
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+			body, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
 
-	var resources []map[string]interface{}
+			var list struct {
+				Items []struct {
+					Metadata struct {
+						Name        string            `json:"name"`
+						Namespace   string            `json:"namespace"`
+						Annotations map[string]string `json:"annotations"`
+					} `json:"metadata"`
+					Spec struct {
+						Template struct {
+							Spec struct {
+								Containers []struct {
+									Resources struct {
+										Requests map[string]string `json:"requests"`
+										Limits   map[string]string `json:"limits"`
+									} `json:"resources"`
+								} `json:"containers"`
+							} `json:"spec"`
+						} `json:"template"`
+					} `json:"spec"`
+				} `json:"items"`
+			}
 
-	// Query Deployments across all namespaces
-	for _, kind := range []string{"deployments", "statefulsets"} {
-		url := fmt.Sprintf("%s/apis/apps/v1/%s", apiBase, kind)
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
+			if json.Unmarshal(body, &list) != nil {
+				continue
+			}
 
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
+			kindName := "Deployment"
+			if kind == "statefulsets" {
+				kindName = "StatefulSet"
+			}
 
-		body, _ := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-
-		var list struct {
-			Items []struct {
-				Metadata struct {
-					Name        string            `json:"name"`
-					Namespace   string            `json:"namespace"`
-					Annotations map[string]string `json:"annotations"`
-				} `json:"metadata"`
-				Spec struct {
-					Template struct {
-						Spec struct {
-							Containers []struct {
-								Resources struct {
-									Requests map[string]string `json:"requests"`
-									Limits   map[string]string `json:"limits"`
-								} `json:"resources"`
-							} `json:"containers"`
-						} `json:"spec"`
-					} `json:"template"`
-				} `json:"spec"`
-			} `json:"items"`
-		}
-
-		if json.Unmarshal(body, &list) != nil {
-			continue
-		}
-
-		kindName := "Deployment"
-		if kind == "statefulsets" {
-			kindName = "StatefulSet"
-		}
-
-		for _, item := range list.Items {
-			if item.Metadata.Annotations["kairos.io/managed"] == "true" {
-				cpu := ""
-				mem := ""
-				if len(item.Spec.Template.Spec.Containers) > 0 {
-					res := item.Spec.Template.Spec.Containers[0].Resources
-					cpu = res.Requests["cpu"]
-					mem = res.Requests["memory"]
-					if cpu == "" {
-						cpu = res.Limits["cpu"]
+			for _, item := range list.Items {
+				if item.Metadata.Annotations["kairos.io/managed"] == "true" {
+					cpu := ""
+					mem := ""
+					if len(item.Spec.Template.Spec.Containers) > 0 {
+						res := item.Spec.Template.Spec.Containers[0].Resources
+						cpu = res.Requests["cpu"]
+						mem = res.Requests["memory"]
+						if cpu == "" {
+							cpu = res.Limits["cpu"]
+						}
+						if mem == "" {
+							mem = res.Limits["memory"]
+						}
 					}
-					if mem == "" {
-						mem = res.Limits["memory"]
-					}
+					allResources = append(allResources, ManagedResource{
+						Name:          item.Metadata.Name,
+						Namespace:     item.Metadata.Namespace,
+						Kind:          kindName,
+						Cluster:       "hub",
+						Policy:        item.Metadata.Annotations["kairos.io/policy"],
+						Agent:         item.Metadata.Annotations["kairos.io/agent"],
+						CurrentCPU:    cpu,
+						CurrentMemory: mem,
+						Status:        "managed",
+					})
 				}
-				resources = append(resources, map[string]interface{}{
-					"name":          item.Metadata.Name,
-					"namespace":     item.Metadata.Namespace,
-					"kind":          kindName,
-					"cluster":       "hub",
-					"policy":        item.Metadata.Annotations["kairos.io/policy"],
-					"agent":         item.Metadata.Annotations["kairos.io/agent"],
-					"currentCPU":    cpu,
-					"currentMemory": mem,
-					"status":        "managed",
-				})
 			}
 		}
 	}
 
-	json.NewEncoder(w).Encode(resources)
+	json.NewEncoder(w).Encode(allResources)
 }

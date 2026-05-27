@@ -446,6 +446,152 @@ LAST SEEN   TYPE     REASON             OBJECT                    MESSAGE
       <strong>Pro Tip:</strong> Create one <code>SmartScalingPolicy</code> per environment tier (dev, test, prod) with appropriate default limits, and one <code>KairosAgent</code> per suffix. This gives you centralized governance with environment-specific tuning.
     </div>
 
+    <h3>Configuration Modes</h3>
+    <div class="alert alert-success">
+      Kairos supports <strong>4 operational modes</strong> that can be combined freely. You can run purely metric-based (no AI), AI-assisted, target specific namespaces, use suffix patterns, or combine both.
+    </div>
+
+    <h4>Mode A: Without AI — Pure metric rules (specific namespaces)</h4>
+    <p>No AI model needed. The operator evaluates Prometheus/Thanos metrics directly:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: metrics-only-agent
+  namespace: kairos-system
+spec:
+  mode: supervised       # Human reviews before applying
+  aiModel:
+    apiURL: ""           # Empty = AI disabled
+    model: ""
+  watch:
+    namespaces:          # Explicit list of namespaces
+    - ecommerce-prod
+    - billing-prod
+    - payments-prod
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 5
+    rollbackOnFailure: true
+  reporting:
+    interval: "10m"</code></pre>
+
+    <h4>Mode B: With AI — Autonomous optimization (suffix pattern)</h4>
+    <p>AI model analyzes workload patterns and recommends/applies resource changes:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: ai-autopilot-agent
+  namespace: kairos-system
+spec:
+  mode: autopilot       # AI applies changes automatically
+  aiModel:
+    apiURL: "https://litellm.apps.maas.example.com/v1/chat/completions"
+    model: "deepseek-r1-distill-qwen-14b"
+    secretRef:
+      name: kairos-ai-credentials
+      key: api-key
+    tls:
+      insecureSkipVerify: false    # Verify TLS in production
+  watch:
+    namespaceSuffix: "-prod"       # All *-prod namespaces automatically
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 20
+    rollbackOnFailure: true
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.apps.hub-cluster.example.com"
+    tls:
+      insecureSkipVerify: true     # Disconnected environments
+  reporting:
+    interval: "5m"</code></pre>
+
+    <h4>Mode C: Combined — Specific namespaces + suffix + AI</h4>
+    <p>Watch both a fixed set of critical namespaces AND all namespaces matching a suffix pattern:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: hybrid-agent
+  namespace: kairos-system
+spec:
+  mode: supervised
+  aiModel:
+    apiURL: "http://vllm.ai-system.svc:8000/v1/chat/completions"
+    model: "granite-3b-code"
+    tls:
+      insecureSkipVerify: true     # Internal service, no public TLS
+  watch:
+    namespaces:                    # Always watch these critical namespaces
+    - core-banking-prod
+    - fraud-detection-prod
+    - payment-gateway-prod
+    namespaceSuffix: "-staging"    # ALSO watch all *-staging namespaces
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+    labelSelector: "kairos.io/managed=true"   # Only resources with this label
+  correctionPolicy:
+    maxActionsPerHour: 10
+    requireApprovalAbove: "50%"    # Changes >50% require human approval
+    rollbackOnFailure: true
+    dryRun: false
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.apps.hub.example.com"
+    tokenSecretRef:
+      name: hub-reporting-token
+      key: token
+  reporting:
+    interval: "5m"
+    otelExport: true               # Also export events to OTel</code></pre>
+
+    <h4>Mode D: Disconnected / Air-gapped environment (no AI, insecure TLS)</h4>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: airgapped-agent
+  namespace: kairos-system
+spec:
+  mode: autopilot
+  aiModel:
+    apiURL: ""           # No AI in disconnected mode
+    model: ""
+  watch:
+    namespaces:
+    - factory-floor-prod
+    - scada-prod
+    - plc-monitoring-prod
+    resourceTypes:
+    - Deployment
+  correctionPolicy:
+    maxActionsPerHour: 5
+    rollbackOnFailure: true
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.apps.hub.internal:8443"
+    tls:
+      insecureSkipVerify: true     # Self-signed certs in air-gapped
+      caSecretRef:                 # Or use internal CA
+        name: internal-ca-bundle
+        key: ca.crt
+  reporting:
+    interval: "15m"</code></pre>
+
+    <h4>Comparison Table</h4>
+    <table>
+      <thead><tr><th>Mode</th><th>AI</th><th>Namespace Selection</th><th>TLS</th><th>Best For</th></tr></thead>
+      <tbody>
+        <tr><td><span class="label label-blue">A</span></td><td>No</td><td>Explicit list</td><td>Standard</td><td>Simple metric-based scaling, few namespaces</td></tr>
+        <tr><td><span class="label label-orange">B</span></td><td>Yes (autopilot)</td><td>Suffix pattern</td><td>Configurable</td><td>Large environments with many -prod namespaces</td></tr>
+        <tr><td><span class="label label-purple">C</span></td><td>Yes (supervised)</td><td>Combined</td><td>mTLS/token</td><td>Critical workloads + dynamic discovery</td></tr>
+        <tr><td><span class="label label-green">D</span></td><td>No</td><td>Explicit list</td><td>InsecureSkipVerify</td><td>Disconnected / air-gapped / industrial edge</td></tr>
+      </tbody>
+    </table>
+
     <h3>Console Access</h3>
     <p>The governance console is deployed on the hub cluster with an OpenShift Route:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1

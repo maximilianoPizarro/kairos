@@ -23,8 +23,9 @@ import { Agents } from './pages/Agents';
 import { Policies } from './pages/Policies';
 import { Events } from './pages/Events';
 import { Observability } from './pages/Observability';
+import { ManagedResources } from './pages/ManagedResources';
 
-type PageKey = 'dashboard' | 'agents' | 'policies' | 'events' | 'observability';
+type PageKey = 'dashboard' | 'agents' | 'policies' | 'events' | 'observability' | 'resources';
 
 export const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
@@ -36,6 +37,7 @@ export const App: React.FC = () => {
       case 'policies': return <Policies />;
       case 'events': return <Events />;
       case 'observability': return <Observability />;
+      case 'resources': return <ManagedResources />;
       default: return <Dashboard />;
     }
   };
@@ -81,6 +83,9 @@ export const App: React.FC = () => {
             </NavItem>
             <NavItem isActive={activePage === 'observability'} onClick={() => setActivePage('observability')}>
               Observability
+            </NavItem>
+            <NavItem isActive={activePage === 'resources'} onClick={() => setActivePage('resources')}>
+              Managed Resources
             </NavItem>
           </NavList>
         </Nav>

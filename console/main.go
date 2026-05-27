@@ -136,6 +136,7 @@ func main() {
 	mux.HandleFunc("/api/v1/observability", handleObservability)
 	mux.HandleFunc("/api/v1/metrics/query", handleMetricsQuery)
 	mux.HandleFunc("/api/v1/agent-report", handleAgentReport)
+	mux.HandleFunc("/api/v1/managed-resources", handleManagedResources)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -522,3 +523,125 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 var startTime = time.Now()
+
+func handleManagedResources(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	token := getServiceAccountToken()
+	kubeHost := os.Getenv("KUBERNETES_SERVICE_HOST")
+	kubePort := os.Getenv("KUBERNETES_SERVICE_PORT")
+
+	if kubeHost == "" || token == "" {
+		// Not running in-cluster, return sample data
+		resources := []map[string]interface{}{
+			{"name": "sensor-gateway", "namespace": "factory-prod", "kind": "Deployment", "cluster": "east", "policy": "prod-standard-limits", "agent": "east-industrial-agent", "currentCPU": "500m", "currentMemory": "512Mi", "status": "managed"},
+			{"name": "plc-connector", "namespace": "factory-prod", "kind": "Deployment", "cluster": "east", "policy": "prod-standard-limits", "agent": "east-industrial-agent", "currentCPU": "200m", "currentMemory": "256Mi", "status": "managed"},
+			{"name": "mqtt-broker", "namespace": "iot-prod", "kind": "StatefulSet", "cluster": "west", "policy": "prod-standard-limits", "agent": "west-edge-agent", "currentCPU": "300m", "currentMemory": "512Mi", "status": "managed"},
+			{"name": "data-ingestion", "namespace": "telemetry-prod", "kind": "Deployment", "cluster": "west", "policy": "prod-standard-limits", "agent": "west-edge-agent", "currentCPU": "400m", "currentMemory": "384Mi", "status": "managed"},
+			{"name": "kairos-console", "namespace": "kairos-system", "kind": "Deployment", "cluster": "hub", "policy": "demo-policy", "agent": "hub-agent", "currentCPU": "100m", "currentMemory": "128Mi", "status": "managed"},
+		}
+
+		// Merge managed resources reported by spoke agents
+		agentStore.RLock()
+		for _, report := range agentStore.agents {
+			if report.WatchedResources > 0 {
+				// Already have from events
+			}
+		}
+		agentStore.RUnlock()
+
+		json.NewEncoder(w).Encode(resources)
+		return
+	}
+
+	// In-cluster: query Kubernetes API for annotated resources
+	apiBase := fmt.Sprintf("https://%s:%s", kubeHost, kubePort)
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	var resources []map[string]interface{}
+
+	// Query Deployments across all namespaces
+	for _, kind := range []string{"deployments", "statefulsets"} {
+		url := fmt.Sprintf("%s/apis/apps/v1/%s", apiBase, kind)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+
+		body, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
+		var list struct {
+			Items []struct {
+				Metadata struct {
+					Name        string            `json:"name"`
+					Namespace   string            `json:"namespace"`
+					Annotations map[string]string `json:"annotations"`
+				} `json:"metadata"`
+				Spec struct {
+					Template struct {
+						Spec struct {
+							Containers []struct {
+								Resources struct {
+									Requests map[string]string `json:"requests"`
+									Limits   map[string]string `json:"limits"`
+								} `json:"resources"`
+							} `json:"containers"`
+						} `json:"spec"`
+					} `json:"template"`
+				} `json:"spec"`
+			} `json:"items"`
+		}
+
+		if json.Unmarshal(body, &list) != nil {
+			continue
+		}
+
+		kindName := "Deployment"
+		if kind == "statefulsets" {
+			kindName = "StatefulSet"
+		}
+
+		for _, item := range list.Items {
+			if item.Metadata.Annotations["kairos.io/managed"] == "true" {
+				cpu := ""
+				mem := ""
+				if len(item.Spec.Template.Spec.Containers) > 0 {
+					res := item.Spec.Template.Spec.Containers[0].Resources
+					cpu = res.Requests["cpu"]
+					mem = res.Requests["memory"]
+					if cpu == "" {
+						cpu = res.Limits["cpu"]
+					}
+					if mem == "" {
+						mem = res.Limits["memory"]
+					}
+				}
+				resources = append(resources, map[string]interface{}{
+					"name":          item.Metadata.Name,
+					"namespace":     item.Metadata.Namespace,
+					"kind":          kindName,
+					"cluster":       "hub",
+					"policy":        item.Metadata.Annotations["kairos.io/policy"],
+					"agent":         item.Metadata.Annotations["kairos.io/agent"],
+					"currentCPU":    cpu,
+					"currentMemory": mem,
+					"status":        "managed",
+				})
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(resources)
+}

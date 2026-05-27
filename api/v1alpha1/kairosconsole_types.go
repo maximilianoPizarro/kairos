@@ -70,6 +70,12 @@ type ClusterRef struct {
 	Name   string `json:"name"`
 	Region string `json:"region,omitempty"`
 	APIURL string `json:"apiURL,omitempty"`
+	// Bearer token secret for authenticating to this cluster's API
+	// +optional
+	TokenSecretRef *SecretKeyRef `json:"tokenSecretRef,omitempty"`
+	// TLS settings for this cluster connection
+	// +optional
+	TLS *TLSConfig `json:"tls,omitempty"`
 }
 
 // KairosConsoleStatus defines the observed state of KairosConsole.

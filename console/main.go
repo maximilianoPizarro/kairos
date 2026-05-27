@@ -45,6 +45,30 @@ type Event struct {
 	Data      interface{} `json:"data"`
 }
 
+// AgentReport is what spoke agents push to the hub console
+type AgentReport struct {
+	Name             string    `json:"name"`
+	Namespace        string    `json:"namespace"`
+	Cluster          string    `json:"cluster"`
+	Mode             string    `json:"mode"`
+	Phase            string    `json:"phase"`
+	WatchedResources int       `json:"watchedResources"`
+	TotalCorrections int       `json:"totalCorrections"`
+	LastCheck        time.Time `json:"lastCheck"`
+	AIModel          string    `json:"aiModel"`
+	Events           []map[string]interface{} `json:"events,omitempty"`
+}
+
+// agentStore holds agent reports from spoke clusters (thread-safe)
+var agentStore = struct {
+	sync.RWMutex
+	agents map[string]*AgentReport
+	events []map[string]interface{}
+}{
+	agents: make(map[string]*AgentReport),
+	events: make([]map[string]interface{}, 0),
+}
+
 type Hub struct {
 	clients    map[*websocket.Conn]bool
 	broadcast  chan Event
@@ -111,6 +135,7 @@ func main() {
 	mux.HandleFunc("/api/v1/status", handleStatus)
 	mux.HandleFunc("/api/v1/observability", handleObservability)
 	mux.HandleFunc("/api/v1/metrics/query", handleMetricsQuery)
+	mux.HandleFunc("/api/v1/agent-report", handleAgentReport)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -182,10 +207,12 @@ func queryThanos(query string) ([]byte, error) {
 	token := getServiceAccountToken()
 	endpoint := getThanosEndpoint()
 
+	skipVerify := os.Getenv("THANOS_INSECURE_SKIP_VERIFY") != "false"
+
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify},
 		},
 	}
 
@@ -292,6 +319,8 @@ func handleMetricsQuery(w http.ResponseWriter, r *http.Request) {
 
 func handleAgents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Local agent from this cluster (hub)
 	agents := []map[string]interface{}{
 		{
 			"name":             "hub-agent",
@@ -304,30 +333,83 @@ func handleAgents(w http.ResponseWriter, r *http.Request) {
 			"lastCheck":        time.Now().Add(-30 * time.Second),
 			"aiModel":          "deepseek-r1-distill-qwen-14b",
 		},
-		{
-			"name":             "east-agent",
-			"namespace":        "kairos-system",
-			"cluster":          "east",
-			"mode":             "autopilot",
-			"phase":            "Active",
-			"watchedResources": 12,
-			"totalCorrections": 3,
-			"lastCheck":        time.Now().Add(-45 * time.Second),
-			"aiModel":          "deepseek-r1-distill-qwen-14b",
-		},
-		{
-			"name":             "west-agent",
-			"namespace":        "kairos-system",
-			"cluster":          "west",
-			"mode":             "autopilot",
-			"phase":            "Active",
-			"watchedResources": 10,
-			"totalCorrections": 1,
-			"lastCheck":        time.Now().Add(-20 * time.Second),
-			"aiModel":          "deepseek-r1-distill-qwen-14b",
-		},
 	}
+
+	// Merge in agents reported by spoke clusters
+	agentStore.RLock()
+	for _, report := range agentStore.agents {
+		agents = append(agents, map[string]interface{}{
+			"name":             report.Name,
+			"namespace":        report.Namespace,
+			"cluster":          report.Cluster,
+			"mode":             report.Mode,
+			"phase":            report.Phase,
+			"watchedResources": report.WatchedResources,
+			"totalCorrections": report.TotalCorrections,
+			"lastCheck":        report.LastCheck,
+			"aiModel":          report.AIModel,
+		})
+	}
+	agentStore.RUnlock()
+
+	// If no spoke agents have reported, show placeholder entries
+	if len(agents) == 1 {
+		agents = append(agents,
+			map[string]interface{}{
+				"name": "east-agent", "namespace": "kairos-system", "cluster": "east",
+				"mode": "autopilot", "phase": "Active", "watchedResources": 12,
+				"totalCorrections": 3, "lastCheck": time.Now().Add(-45 * time.Second),
+				"aiModel": "deepseek-r1-distill-qwen-14b",
+			},
+			map[string]interface{}{
+				"name": "west-agent", "namespace": "kairos-system", "cluster": "west",
+				"mode": "autopilot", "phase": "Active", "watchedResources": 10,
+				"totalCorrections": 1, "lastCheck": time.Now().Add(-20 * time.Second),
+				"aiModel": "deepseek-r1-distill-qwen-14b",
+			},
+		)
+	}
+
 	json.NewEncoder(w).Encode(agents)
+}
+
+func handleAgentReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var report AgentReport
+	if err := json.NewDecoder(r.Body).Decode(&report); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if report.Name == "" || report.Cluster == "" {
+		http.Error(w, "name and cluster are required", http.StatusBadRequest)
+		return
+	}
+
+	report.LastCheck = time.Now()
+	key := report.Cluster + "/" + report.Name
+
+	agentStore.Lock()
+	agentStore.agents[key] = &report
+	// Store events from the report
+	if len(report.Events) > 0 {
+		agentStore.events = append(agentStore.events, report.Events...)
+		// Keep last 100 events
+		if len(agentStore.events) > 100 {
+			agentStore.events = agentStore.events[len(agentStore.events)-100:]
+		}
+	}
+	agentStore.Unlock()
+
+	log.Printf("Agent report received: %s/%s (cluster=%s, mode=%s, watched=%d)",
+		report.Namespace, report.Name, report.Cluster, report.Mode, report.WatchedResources)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "accepted"})
 }
 
 func handlePolicies(w http.ResponseWriter, r *http.Request) {
@@ -350,6 +432,8 @@ func handlePolicies(w http.ResponseWriter, r *http.Request) {
 
 func handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// Base events (local)
 	events := []map[string]interface{}{
 		{
 			"timestamp": time.Now().Add(-2 * time.Minute),
@@ -360,25 +444,57 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 			"detail":    "All metrics within threshold",
 			"cluster":   "hub",
 		},
-		{
-			"timestamp": time.Now().Add(-10 * time.Minute),
-			"type":      "AgentReconciled",
-			"resource":  "east-agent",
-			"namespace": "kairos-system",
-			"action":    "ResourceOptimized",
-			"detail":    "Memory request adjusted from 256Mi to 384Mi via AI recommendation",
-			"cluster":   "east",
-		},
-		{
-			"timestamp": time.Now().Add(-25 * time.Minute),
-			"type":      "PolicyCreated",
-			"resource":  "demo-policy",
-			"namespace": "kairos-system",
-			"action":    "Created",
-			"detail":    "SmartScalingPolicy targeting kairos-console with Thanos metrics",
-			"cluster":   "hub",
-		},
 	}
+
+	// Merge events reported by spoke agents
+	agentStore.RLock()
+	events = append(events, agentStore.events...)
+	agentStore.RUnlock()
+
+	// If no remote events, show example entries
+	if len(events) == 1 {
+		events = append(events,
+			map[string]interface{}{
+				"timestamp": time.Now().Add(-10 * time.Minute),
+				"type":      "AgentReconciled",
+				"resource":  "east-agent",
+				"namespace": "kairos-system",
+				"action":    "ResourceOptimized",
+				"detail":    "Memory request adjusted from 256Mi to 384Mi via AI recommendation",
+				"cluster":   "east",
+			},
+			map[string]interface{}{
+				"timestamp": time.Now().Add(-25 * time.Minute),
+				"type":      "PolicyCreated",
+				"resource":  "demo-policy",
+				"namespace": "kairos-system",
+				"action":    "Created",
+				"detail":    "SmartScalingPolicy targeting kairos-console with Thanos metrics",
+				"cluster":   "hub",
+			},
+		)
+	}
+
+	// Pagination support
+	page := r.URL.Query().Get("page")
+	pageSize := r.URL.Query().Get("pageSize")
+	if page != "" && pageSize != "" {
+		p := 0
+		ps := 20
+		fmt.Sscanf(page, "%d", &p)
+		fmt.Sscanf(pageSize, "%d", &ps)
+		start := p * ps
+		if start >= len(events) {
+			events = []map[string]interface{}{}
+		} else {
+			end := start + ps
+			if end > len(events) {
+				end = len(events)
+			}
+			events = events[start:end]
+		}
+	}
+
 	json.NewEncoder(w).Encode(events)
 }
 

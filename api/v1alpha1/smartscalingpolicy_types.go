@@ -129,6 +129,9 @@ type SmartScalingPolicySpec struct {
 	// Prometheus endpoint (fallback)
 	// +optional
 	PrometheusEndpoint string `json:"prometheusEndpoint,omitempty"`
+	// TLS settings for metrics endpoints (Prometheus/Thanos/OTel)
+	// +optional
+	MetricsTLS *TLSConfig `json:"metricsTLS,omitempty"`
 	// Metric-based scaling rules
 	// +optional
 	Rules []ScalingRule `json:"rules,omitempty"`

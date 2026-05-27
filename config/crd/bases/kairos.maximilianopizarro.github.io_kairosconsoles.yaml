@@ -85,6 +85,48 @@ spec:
                       type: string
                     region:
                       type: string
+                    tls:
+                      description: TLS settings for this cluster connection
+                      properties:
+                        caSecretRef:
+                          description: Custom CA certificate secret reference
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        certSecretRef:
+                          description: Client certificate secret reference (mTLS)
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        insecureSkipVerify:
+                          description: Skip TLS certificate verification (for disconnected/air-gapped
+                            environments)
+                          type: boolean
+                      type: object
+                    tokenSecretRef:
+                      description: Bearer token secret for authenticating to this
+                        cluster's API
+                      properties:
+                        key:
+                          type: string
+                        name:
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
                   required:
                   - name
                   type: object

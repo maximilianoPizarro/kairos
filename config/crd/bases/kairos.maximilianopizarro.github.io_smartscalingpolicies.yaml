@@ -63,6 +63,36 @@ spec:
                 required:
                 - enabled
                 type: object
+              metricsTLS:
+                description: TLS settings for metrics endpoints (Prometheus/Thanos/OTel)
+                properties:
+                  caSecretRef:
+                    description: Custom CA certificate secret reference
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  certSecretRef:
+                    description: Client certificate secret reference (mTLS)
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  insecureSkipVerify:
+                    description: Skip TLS certificate verification (for disconnected/air-gapped
+                      environments)
+                    type: boolean
+                type: object
               otelEndpoint:
                 description: OTel collector endpoint (gRPC)
                 type: string

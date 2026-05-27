@@ -14,11 +14,13 @@ import {
 interface AgentInfo {
   name: string;
   namespace: string;
+  cluster: string;
   mode: string;
   phase: string;
   watchedResources: number;
   totalCorrections: number;
   lastCheck: string;
+  aiModel: string;
 }
 
 export const Agents: React.FC = () => {
@@ -55,9 +57,20 @@ export const Agents: React.FC = () => {
             <Label color="blue" style={{ marginLeft: '0.5rem' }}>
               {agent.mode}
             </Label>
+            <Label color="purple" style={{ marginLeft: '0.5rem' }}>
+              {agent.cluster}
+            </Label>
           </CardTitle>
           <CardBody>
             <DescriptionList isHorizontal>
+              <DescriptionListGroup>
+                <DescriptionListTerm>Cluster</DescriptionListTerm>
+                <DescriptionListDescription>{agent.cluster}</DescriptionListDescription>
+              </DescriptionListGroup>
+              <DescriptionListGroup>
+                <DescriptionListTerm>AI Model</DescriptionListTerm>
+                <DescriptionListDescription>{agent.aiModel || 'N/A'}</DescriptionListDescription>
+              </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>Namespace</DescriptionListTerm>
                 <DescriptionListDescription>{agent.namespace}</DescriptionListDescription>

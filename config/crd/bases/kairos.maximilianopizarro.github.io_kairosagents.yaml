@@ -79,6 +79,36 @@ spec:
                     description: Request timeout
                     format: int32
                     type: integer
+                  tls:
+                    description: TLS settings for AI API connection
+                    properties:
+                      caSecretRef:
+                        description: Custom CA certificate secret reference
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      certSecretRef:
+                        description: Client certificate secret reference (mTLS)
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      insecureSkipVerify:
+                        description: Skip TLS certificate verification (for disconnected/air-gapped
+                          environments)
+                        type: boolean
+                    type: object
                 required:
                 - apiURL
                 - model
@@ -101,6 +131,60 @@ spec:
                     type: boolean
                 required:
                 - maxActionsPerHour
+                type: object
+              hubReporting:
+                description: 'Hub reporting: push agent status to the hub console'
+                properties:
+                  enabled:
+                    description: Enable reporting agent status to hub console
+                    type: boolean
+                  endpoint:
+                    description: Hub console API endpoint (e.g. https://kairos-console.apps.hub-cluster.example.com)
+                    type: string
+                  tls:
+                    description: TLS settings for hub communication
+                    properties:
+                      caSecretRef:
+                        description: Custom CA certificate secret reference
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      certSecretRef:
+                        description: Client certificate secret reference (mTLS)
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      insecureSkipVerify:
+                        description: Skip TLS certificate verification (for disconnected/air-gapped
+                          environments)
+                        type: boolean
+                    type: object
+                  tokenSecretRef:
+                    description: Bearer token secret for authenticating to the hub
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - enabled
+                - endpoint
                 type: object
               mode:
                 description: 'Operating mode: autopilot or supervised'

@@ -29,6 +29,33 @@ const (
 	AgentModeSupervised AgentMode = "supervised"
 )
 
+// TLSConfig defines TLS settings for connections.
+type TLSConfig struct {
+	// Skip TLS certificate verification (for disconnected/air-gapped environments)
+	// +optional
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+	// Custom CA certificate secret reference
+	// +optional
+	CASecretRef *SecretKeyRef `json:"caSecretRef,omitempty"`
+	// Client certificate secret reference (mTLS)
+	// +optional
+	CertSecretRef *SecretKeyRef `json:"certSecretRef,omitempty"`
+}
+
+// HubReportingConfig defines how the agent reports to the hub cluster console.
+type HubReportingConfig struct {
+	// Enable reporting agent status to hub console
+	Enabled bool `json:"enabled"`
+	// Hub console API endpoint (e.g. https://kairos-console.apps.hub-cluster.example.com)
+	Endpoint string `json:"endpoint"`
+	// Bearer token secret for authenticating to the hub
+	// +optional
+	TokenSecretRef *SecretKeyRef `json:"tokenSecretRef,omitempty"`
+	// TLS settings for hub communication
+	// +optional
+	TLS *TLSConfig `json:"tls,omitempty"`
+}
+
 // AIModelConfig defines the AI model connection.
 type AIModelConfig struct {
 	// OpenAI-compatible API endpoint
@@ -44,6 +71,9 @@ type AIModelConfig struct {
 	// Temperature for model responses (0.0 - 1.0)
 	// +optional
 	Temperature *string `json:"temperature,omitempty"`
+	// TLS settings for AI API connection
+	// +optional
+	TLS *TLSConfig `json:"tls,omitempty"`
 }
 
 // SecretKeyRef references a key in a Secret.
@@ -105,6 +135,9 @@ type KairosAgentSpec struct {
 	// Reporting configuration
 	// +optional
 	Reporting *ReportingConfig `json:"reporting,omitempty"`
+	// Hub reporting: push agent status to the hub console
+	// +optional
+	HubReporting *HubReportingConfig `json:"hubReporting,omitempty"`
 	// Pause the agent
 	// +optional
 	Paused bool `json:"paused,omitempty"`

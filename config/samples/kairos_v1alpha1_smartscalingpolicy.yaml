@@ -1,46 +1,76 @@
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: SmartScalingPolicy
 metadata:
-  name: kafka-scaling-policy
+  name: industrial-edge-policy
   namespace: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
 spec:
   target:
     apiVersion: apps/v1
     kind: Deployment
-    name: factory-kafka
+    name: line-dashboard
     namespace: industrial-edge-tst
-  otelEndpoint: "otel-collector.observability:4317"
-  prometheusEndpoint: "prometheus-k8s.openshift-monitoring:9090"
+  otelEndpoint: "otel-collector.observability.svc.cluster.local:4317"
+  prometheusEndpoint: "prometheus-k8s.openshift-monitoring.svc.cluster.local:9090"
   rules:
-  - name: high-latency-vertical
+  - name: high-cpu-vertical
     when:
-      metric: "http.server.request.duration.p99"
+      metric: "container_cpu_usage_seconds_total"
       operator: GreaterThan
-      threshold: "200"
+      threshold: "80"
+      for: "3m"
+    action:
+      type: IncreaseResources
+      increaseCPUPercent: 25
+      maxCPU: "2"
+      increaseMemoryPercent: 20
+      maxMemory: "2Gi"
+      cooldown: "5m"
+  - name: memory-pressure-vertical
+    when:
+      metric: "container_memory_working_set_bytes"
+      operator: GreaterThan
+      threshold: "85"
       for: "2m"
     action:
       type: IncreaseResources
-      increaseMemoryPercent: 25
+      increaseMemoryPercent: 30
       maxMemory: "4Gi"
-      increaseCPUPercent: 20
-      maxCPU: "4"
       cooldown: "5m"
-  - name: queue-depth-horizontal
+  - name: request-rate-horizontal
     when:
-      metric: "messaging.queue.depth"
+      metric: "http_server_requests_per_second"
       operator: GreaterThan
-      threshold: "500"
+      threshold: "1000"
+      for: "1m"
     action:
       type: AddReplicas
-      replicas: 2
-      maxReplicas: 8
+      replicas: 1
+      maxReplicas: 6
       cooldown: "10m"
+  - name: low-utilization-downscale
+    when:
+      metric: "container_cpu_usage_seconds_total"
+      operator: LessThan
+      threshold: "20"
+      for: "15m"
+    action:
+      type: DecreaseResources
+      increaseCPUPercent: 20
+      minCPU: "100m"
+      cooldown: "30m"
   schedule:
-  - name: peak-hours-preemptive
+  - name: business-hours-preemptive
     cron: "0 8 * * 1-5"
     action:
       type: SetMinReplicas
-      minReplicas: 5
+      minReplicas: 3
+  - name: off-hours-scale-down
+    cron: "0 20 * * 1-5"
+    action:
+      type: SetMinReplicas
+      minReplicas: 1
   ai:
     enabled: false
   paused: false

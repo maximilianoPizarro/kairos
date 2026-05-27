@@ -1,10 +1,12 @@
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
-  name: agent-east-edge
+  name: agent-production
   namespace: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
 spec:
-  mode: autopilot
+  mode: supervised
   aiModel:
     apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
     model: "granite-31-8b"
@@ -12,13 +14,18 @@ spec:
       name: kairos-ai-credentials
       key: token
     timeoutSeconds: 60
+    temperature: "0.3"
   watch:
+    # Option A: Explicit namespace list
     namespaces:
     - industrial-edge-tst
     - factory-kafka
+    # Option B: Watch all namespaces ending with suffix (e.g. myapp-prod, orders-prod)
+    namespaceSuffix: "-prod"
     resourceTypes:
     - Deployment
     - StatefulSet
+    labelSelector: "kairos.io/managed=true"
   correctionPolicy:
     maxActionsPerHour: 10
     requireApprovalAbove: "50%"
@@ -28,3 +35,58 @@ spec:
     interval: "30s"
     otelExport: true
   paused: false
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: agent-dev-environments
+  namespace: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
+spec:
+  mode: autopilot
+  aiModel:
+    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
+    model: "granite-31-8b"
+    apiKeySecret:
+      name: kairos-ai-credentials
+      key: token
+    timeoutSeconds: 30
+  watch:
+    namespaces: []
+    namespaceSuffix: "-dev"
+    resourceTypes:
+    - Deployment
+  correctionPolicy:
+    maxActionsPerHour: 50
+    rollbackOnFailure: true
+    dryRun: false
+  reporting:
+    interval: "60s"
+  paused: false
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: agent-qa-environments
+  namespace: kairos-system
+spec:
+  mode: supervised
+  aiModel:
+    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
+    model: "granite-31-8b"
+    apiKeySecret:
+      name: kairos-ai-credentials
+      key: token
+  watch:
+    namespaces: []
+    namespaceSuffix: "-qa"
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 20
+    requireApprovalAbove: "30%"
+    rollbackOnFailure: true
+  reporting:
+    interval: "45s"

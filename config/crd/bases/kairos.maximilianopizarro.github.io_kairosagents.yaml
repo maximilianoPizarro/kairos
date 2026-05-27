@@ -129,6 +129,12 @@ spec:
                   labelSelector:
                     description: Label selector for filtering resources
                     type: string
+                  namespaceSuffix:
+                    description: |-
+                      NamespaceSuffix filters namespaces by suffix (e.g. "-dev", "-test", "-qa", "-prod").
+                      When set, the agent watches ALL namespaces ending with this suffix.
+                      Can be combined with explicit Namespaces list.
+                    type: string
                   namespaces:
                     description: Namespaces to watch
                     items:

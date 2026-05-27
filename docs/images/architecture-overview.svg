@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" role="img" aria-labelledby="title desc">
+  <title id="title">Kairos Operator - Multi-cluster Architecture</title>
+  <desc id="desc">Hub-spoke architecture showing Kairos Operator, Console, OTel Collector, optional AI model, ArgoCD coexistence, and spoke workloads.</desc>
+
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f0f23"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="hubGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#0f1729"/>
+    </linearGradient>
+    <linearGradient id="spokeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cyanGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#00d4ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#00d4ff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#00ff88"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#ff6b35"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#a855f7"/>
+    </marker>
+    <style>
+      .title { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 28px; font-weight: 700; fill: #f8fafc; letter-spacing: -0.5px; }
+      .subtitle { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 400; fill: #94a3b8; letter-spacing: 2px; }
+      .label-lg { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 600; fill: #e2e8f0; }
+      .label-md { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 12px; font-weight: 600; fill: #cbd5e1; }
+      .label-sm { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 500; fill: #94a3b8; }
+      .mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 9px; fill: #64748b; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#bgGrad)"/>
+  <rect width="1200" height="800" fill="url(#grid)"/>
+
+  <!-- Header -->
+  <text x="600" y="48" text-anchor="middle" class="title">Kairos Operator - Multi-cluster Architecture</text>
+  <text x="600" y="72" text-anchor="middle" class="subtitle">&#954;&#945;&#953;&#961;&#972;&#962; &#8212; The Opportune Moment</text>
+  <line x1="300" y1="88" x2="900" y2="88" stroke="url(#cyanGlow)" stroke-width="1.5"/>
+
+  <!-- Hub Cluster Container -->
+  <g filter="url(#shadow)">
+    <rect x="280" y="110" width="640" height="420" rx="16" fill="url(#hubGrad)" stroke="#00d4ff" stroke-width="2" stroke-opacity="0.5"/>
+    <rect x="280" y="110" width="640" height="420" rx="16" fill="none" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.15"/>
+  </g>
+  <circle cx="310" cy="140" r="6" fill="#00d4ff" opacity="0.8"/>
+  <text x="324" y="145" class="label-lg" fill="#00d4ff">Hub Cluster</text>
+  <text x="324" y="162" class="label-sm">OpenShift / Kubernetes Control Plane</text>
+
+  <!-- Kairos Operator -->
+  <g filter="url(#glowCyan)">
+    <rect x="310" y="185" width="180" height="90" rx="10" fill="#0f172a" stroke="#00d4ff" stroke-width="1.5"/>
+    <rect x="310" y="185" width="180" height="28" rx="10" fill="#00d4ff" fill-opacity="0.12"/>
+    <rect x="310" y="203" width="180" height="10" fill="#00d4ff" fill-opacity="0.12"/>
+    <text x="400" y="205" text-anchor="middle" class="label-md" fill="#00d4ff">Kairos Operator</text>
+    <text x="400" y="228" text-anchor="middle" class="label-sm">controller-manager</text>
+    <text x="400" y="248" text-anchor="middle" class="mono">SmartScalingPolicy CRD</text>
+    <text x="400" y="262" text-anchor="middle" class="mono">Server-Side Apply</text>
+  </g>
+
+  <!-- Kairos Console -->
+  <g>
+    <rect x="510" y="185" width="180" height="90" rx="10" fill="#0f172a" stroke="#a855f7" stroke-width="1.5"/>
+    <rect x="510" y="185" width="180" height="28" rx="10" fill="#a855f7" fill-opacity="0.12"/>
+    <rect x="510" y="203" width="180" height="10" fill="#a855f7" fill-opacity="0.12"/>
+    <text x="600" y="205" text-anchor="middle" class="label-md" fill="#a855f7">Kairos Console</text>
+    <text x="600" y="228" text-anchor="middle" class="label-sm">Web UI Dashboard</text>
+    <text x="600" y="248" text-anchor="middle" class="mono">Policy status &amp; events</text>
+    <text x="600" y="262" text-anchor="middle" class="mono">Approval queue</text>
+  </g>
+
+  <!-- OTel Collector -->
+  <g>
+    <rect x="710" y="185" width="180" height="90" rx="10" fill="#0f172a" stroke="#00ff88" stroke-width="1.5"/>
+    <rect x="710" y="185" width="180" height="28" rx="10" fill="#00ff88" fill-opacity="0.12"/>
+    <rect x="710" y="203" width="180" height="10" fill="#00ff88" fill-opacity="0.12"/>
+    <text x="800" y="205" text-anchor="middle" class="label-md" fill="#00ff88">OTel Collector</text>
+    <text x="800" y="228" text-anchor="middle" class="label-sm">Metrics Aggregation</text>
+    <text x="800" y="248" text-anchor="middle" class="mono">gRPC / Prometheus</text>
+    <text x="800" y="262" text-anchor="middle" class="mono">Hub metrics pipeline</text>
+  </g>
+
+  <!-- AI Model (optional, dashed) -->
+  <g>
+    <rect x="310" y="300" width="180" height="90" rx="10" fill="#0f172a" fill-opacity="0.6" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="400" y="328" text-anchor="middle" class="label-md" fill="#ff6b35">AI Model</text>
+    <text x="400" y="348" text-anchor="middle" class="label-sm">Optional Autopilot</text>
+    <text x="400" y="368" text-anchor="middle" class="mono">Scaling recommendations</text>
+    <text x="400" y="382" text-anchor="middle" class="label-sm" fill="#ff6b35" font-style="italic">optional</text>
+  </g>
+
+  <!-- ArgoCD (separate with no conflict) -->
+  <g>
+    <rect x="510" y="300" width="180" height="90" rx="10" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/>
+    <text x="600" y="328" text-anchor="middle" class="label-md" fill="#cbd5e1">ArgoCD</text>
+    <text x="600" y="348" text-anchor="middle" class="label-sm">GitOps Sync</text>
+    <text x="600" y="368" text-anchor="middle" class="mono">resources: {} in Git</text>
+    <!-- No conflict badge -->
+    <rect x="555" y="378" width="90" height="18" rx="9" fill="#00ff88" fill-opacity="0.15" stroke="#00ff88" stroke-width="1"/>
+    <text x="600" y="391" text-anchor="middle" class="label-sm" fill="#00ff88" font-weight="700">&#10003; No Conflict</text>
+  </g>
+
+  <!-- CRD Store -->
+  <g>
+    <rect x="710" y="300" width="180" height="90" rx="10" fill="#0f172a" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.4"/>
+    <text x="800" y="328" text-anchor="middle" class="label-md">Kubernetes API</text>
+    <text x="800" y="348" text-anchor="middle" class="label-sm">CRD Status Store</text>
+    <text x="800" y="368" text-anchor="middle" class="mono">SmartScalingPolicy</text>
+    <text x="800" y="382" text-anchor="middle" class="mono">KairosAgent</text>
+  </g>
+
+  <!-- Hub internal connections -->
+  <path d="M490 230 L510 230" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrowPurple)" opacity="0.7"/>
+  <text x="500" y="222" text-anchor="middle" class="label-sm" fill="#a855f7">read</text>
+
+  <path d="M400 275 L400 300" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#arrowOrange)" opacity="0.7"/>
+  <text x="418" y="292" class="label-sm" fill="#ff6b35">consult</text>
+
+  <path d="M490 345 L510 345" stroke="#64748b" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+  <text x="500" y="337" text-anchor="middle" class="label-sm" fill="#64748b">field ownership</text>
+
+  <!-- East Spoke -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="560" width="340" height="200" rx="14" fill="url(#spokeGrad)" stroke="#00ff88" stroke-width="1.5" stroke-opacity="0.6"/>
+  </g>
+  <circle cx="90" cy="590" r="5" fill="#00ff88"/>
+  <text x="104" y="595" class="label-lg" fill="#00ff88">East Spoke Cluster</text>
+  <text x="104" y="612" class="label-sm">Remote Workloads</text>
+
+  <!-- East workloads -->
+  <rect x="85" y="630" width="130" height="55" rx="8" fill="#0f172a" stroke="#00ff88" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="150" y="655" text-anchor="middle" class="label-md">Deployment A</text>
+  <text x="150" y="672" text-anchor="middle" class="mono">kairos.io/managed</text>
+
+  <rect x="235" y="630" width="130" height="55" rx="8" fill="#0f172a" stroke="#00ff88" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="300" y="655" text-anchor="middle" class="label-md">Deployment B</text>
+  <text x="300" y="672" text-anchor="middle" class="mono">resources managed</text>
+
+  <rect x="160" y="700" width="140" height="40" rx="8" fill="#0f172a" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="230" y="725" text-anchor="middle" class="label-sm">Kairos Agent (optional)</text>
+
+  <!-- West Spoke -->
+  <g filter="url(#shadow)">
+    <rect x="800" y="560" width="340" height="200" rx="14" fill="url(#spokeGrad)" stroke="#ff6b35" stroke-width="1.5" stroke-opacity="0.6"/>
+  </g>
+  <circle cx="830" cy="590" r="5" fill="#ff6b35"/>
+  <text x="844" y="595" class="label-lg" fill="#ff6b35">West Spoke Cluster</text>
+  <text x="844" y="612" class="label-sm">Remote Workloads</text>
+
+  <rect x="825" y="630" width="130" height="55" rx="8" fill="#0f172a" stroke="#ff6b35" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="890" y="655" text-anchor="middle" class="label-md">Deployment C</text>
+  <text x="890" y="672" text-anchor="middle" class="mono">kairos.io/managed</text>
+
+  <rect x="975" y="630" width="130" height="55" rx="8" fill="#0f172a" stroke="#ff6b35" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="1040" y="655" text-anchor="middle" class="label-md">Deployment D</text>
+  <text x="1040" y="672" text-anchor="middle" class="mono">resources managed</text>
+
+  <rect x="900" y="700" width="140" height="40" rx="8" fill="#0f172a" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="970" y="725" text-anchor="middle" class="label-sm">Kairos Agent (optional)</text>
+
+  <!-- Metrics flow: spokes to hub OTel -->
+  <path d="M230 630 C230 520, 750 520, 780 275" fill="none" stroke="#00ff88" stroke-width="2" marker-end="url(#arrowGreen)" opacity="0.85" filter="url(#glowGreen)"/>
+  <path d="M970 630 C970 520, 820 520, 820 275" fill="none" stroke="#00ff88" stroke-width="2" marker-end="url(#arrowGreen)" opacity="0.85"/>
+
+  <rect x="480" y="490" width="200" height="24" rx="6" fill="#0f172a" stroke="#00ff88" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="580" y="506" text-anchor="middle" class="label-sm" fill="#00ff88">OTel metrics &#8594; Hub Collector</text>
+
+  <!-- SSA flow: operator to spokes -->
+  <path d="M350 275 C200 400, 200 560, 200 630" fill="none" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#arrowCyan)" opacity="0.9" filter="url(#glowCyan)"/>
+  <path d="M450 275 C550 420, 900 520, 950 630" fill="none" stroke="#00d4ff" stroke-width="2.5" marker-end="url(#arrowCyan)" opacity="0.9"/>
+
+  <rect x="130" y="440" width="210" height="24" rx="6" fill="#0f172a" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.5"/>
+  <text x="235" y="456" text-anchor="middle" class="label-sm" fill="#00d4ff">Server-Side Apply &#8594; Workloads</text>
+
+  <!-- AI recommendations -->
+  <path d="M490 345 C520 420, 420 480, 380 530" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrowOrange)" opacity="0.7"/>
+  <rect x="340" y="510" width="170" height="22" rx="6" fill="#0f172a" stroke="#ff6b35" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="425" y="525" text-anchor="middle" class="label-sm" fill="#ff6b35">AI recommendations</text>
+
+  <!-- Console reads CRD -->
+  <path d="M690 230 C720 260, 760 290, 780 320" fill="none" stroke="#a855f7" stroke-width="1.5" marker-end="url(#arrowPurple)" opacity="0.7"/>
+  <rect x="700" y="410" width="160" height="22" rx="6" fill="#0f172a" stroke="#a855f7" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="780" y="425" text-anchor="middle" class="label-sm" fill="#a855f7">Console reads CRD status</text>
+
+  <!-- Legend -->
+  <rect x="60" y="110" width="190" height="130" rx="10" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1"/>
+  <text x="80" y="134" class="label-md">Legend</text>
+  <line x1="80" y1="152" x2="110" y2="152" stroke="#00ff88" stroke-width="2"/><text x="118" y="156" class="label-sm">Metrics flow</text>
+  <line x1="80" y1="172" x2="110" y2="172" stroke="#00d4ff" stroke-width="2"/><text x="118" y="176" class="label-sm">SSA scaling</text>
+  <line x1="80" y1="192" x2="110" y2="192" stroke="#ff6b35" stroke-width="2" stroke-dasharray="4 2"/><text x="118" y="196" class="label-sm">AI advisory</text>
+  <line x1="80" y1="212" x2="110" y2="212" stroke="#a855f7" stroke-width="2"/><text x="118" y="216" class="label-sm">Status / UI</text>
+  <rect x="80" y="222" width="30" height="12" rx="3" fill="none" stroke="#ff6b35" stroke-width="1" stroke-dasharray="3 2"/><text x="118" y="232" class="label-sm">Optional component</text>
+
+  <!-- Footer -->
+  <text x="600" y="788" text-anchor="middle" class="label-sm" fill="#475569">Kairos Operator &#183; OpenShift &#183; Multi-Cluster Hub-Spoke &#183; ArgoCD Compatible</text>
+</svg>

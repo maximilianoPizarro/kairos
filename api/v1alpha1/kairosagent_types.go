@@ -61,6 +61,11 @@ type WatchConfig struct {
 	// Label selector for filtering resources
 	// +optional
 	LabelSelector string `json:"labelSelector,omitempty"`
+	// NamespaceSuffix filters namespaces by suffix (e.g. "-dev", "-test", "-qa", "-prod").
+	// When set, the agent watches ALL namespaces ending with this suffix.
+	// Can be combined with explicit Namespaces list.
+	// +optional
+	NamespaceSuffix string `json:"namespaceSuffix,omitempty"`
 }
 
 // CorrectionPolicy defines guardrails for autonomous corrections.

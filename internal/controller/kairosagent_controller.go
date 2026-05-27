@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,6 +53,7 @@ type KairosAgentReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -121,7 +123,22 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	var watchedCount int32
 	var corrections []kairosv1alpha1.CorrectionRecord
 
-	for _, ns := range agent.Spec.Watch.Namespaces {
+	// Resolve namespaces from suffix
+	watchNamespaces := agent.Spec.Watch.Namespaces
+	if agent.Spec.Watch.NamespaceSuffix != "" {
+		nsList := &corev1.NamespaceList{}
+		if err := r.List(ctx, nsList); err != nil {
+			log.Error(err, "Failed to list namespaces for suffix matching")
+		} else {
+			for _, ns := range nsList.Items {
+				if strings.HasSuffix(ns.Name, agent.Spec.Watch.NamespaceSuffix) {
+					watchNamespaces = append(watchNamespaces, ns.Name)
+				}
+			}
+		}
+	}
+
+	for _, ns := range watchNamespaces {
 		for _, resType := range agent.Spec.Watch.ResourceTypes {
 			switch resType {
 			case "Deployment":
@@ -187,7 +204,7 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		Type:               "Ready",
 		Status:             metav1.ConditionTrue,
 		Reason:             "Running",
-		Message:            fmt.Sprintf("Watching %d resources across %d namespaces", watchedCount, len(agent.Spec.Watch.Namespaces)),
+		Message:            fmt.Sprintf("Watching %d resources across %d namespaces", watchedCount, len(watchNamespaces)),
 		LastTransitionTime: metav1.Now(),
 	})
 

@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kairos-controller-manager
+  namespace: kairos-system
+  labels:
+    app.kubernetes.io/name: kairos
+    app.kubernetes.io/managed-by: kairos-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kairos-agent-role
+  labels:
+    app.kubernetes.io/name: kairos
+rules:
+- apiGroups: [""]
+  resources: [namespaces]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [pods, services, serviceaccounts]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [secrets]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [events]
+  verbs: [create, patch]
+- apiGroups: [apps]
+  resources: [deployments, statefulsets]
+  verbs: [get, list, watch, patch]
+- apiGroups: [apps]
+  resources: [deployments/scale, statefulsets/scale]
+  verbs: [get, update, patch]
+- apiGroups: [autoscaling]
+  resources: [horizontalpodautoscalers]
+  verbs: [get, list, watch]
+- apiGroups: [kairos.maximilianopizarro.github.io]
+  resources: [smartscalingpolicies, kairosagents, kairosconsoles]
+  verbs: [get, list, watch, create, update, patch, delete]
+- apiGroups: [kairos.maximilianopizarro.github.io]
+  resources: [smartscalingpolicies/status, kairosagents/status, kairosconsoles/status]
+  verbs: [get, update, patch]
+- apiGroups: [kairos.maximilianopizarro.github.io]
+  resources: [smartscalingpolicies/finalizers, kairosagents/finalizers, kairosconsoles/finalizers]
+  verbs: [update]
+- apiGroups: [route.openshift.io]
+  resources: [routes]
+  verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kairos-agent-rolebinding
+  labels:
+    app.kubernetes.io/name: kairos
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kairos-agent-role
+subjects:
+- kind: ServiceAccount
+  name: kairos-controller-manager
+  namespace: kairos-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kairos-ai-credentials
+  namespace: kairos-system
+  labels:
+    app.kubernetes.io/name: kairos
+type: Opaque
+stringData:
+  token: "YOUR_AI_MODEL_TOKEN_HERE"

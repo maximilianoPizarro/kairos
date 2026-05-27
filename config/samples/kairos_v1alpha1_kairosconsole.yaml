@@ -3,22 +3,24 @@ kind: KairosConsole
 metadata:
   name: kairos-console
   namespace: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
 spec:
   replicas: 1
   image: "quay.io/maximilianopizarro/kairos-console:v0.1.0"
   route:
     enabled: true
-    host: "kairos.apps.hub.example.com"
+    host: "kairos-console-kairos-system.apps.cluster-example.openshiftapps.com"
     tlsEnabled: true
   auth:
     type: openshift-oauth
   clusters:
   - name: hub
     region: central
-    apiURL: "https://api.hub.example.com:6443"
+    apiURL: "https://api.cluster-hub.openshiftapps.com:6443"
   - name: east
     region: east
-    apiURL: "https://api.east.example.com:6443"
+    apiURL: "https://api.cluster-east.openshiftapps.com:6443"
   - name: west
     region: west
-    apiURL: "https://api.west.example.com:6443"
+    apiURL: "https://api.cluster-west.openshiftapps.com:6443"

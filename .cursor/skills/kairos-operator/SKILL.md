@@ -86,6 +86,6 @@ Optional connection to OpenAI-compatible APIs (vLLM, KServe, Ollama, OpenAI). Th
 - Receives scaling recommendations
 - Operates in `autopilot` (auto-apply) or `supervised` (require approval) mode
 
-## Testing with platform-hub-spoke-config
+## Testing with Multi-cluster Environments
 
 The operator installs in the hub cluster at sync wave 7 in namespace `kairos-system`. SmartScalingPolicies target workloads in spoke clusters that report metrics to the hub's OTel Collector.

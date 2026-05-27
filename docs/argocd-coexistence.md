@@ -76,9 +76,9 @@ Kairos uses Kubernetes Server-Side Apply with field manager `kairos-operator`. T
 
 Only resources with `kairos.io/managed: "true"` annotation are touched by the operator. Without this annotation, Kairos completely ignores the resource.
 
-## Integration with platform-hub-spoke-config
+## Integration with Multi-cluster Environments
 
-For the hub-spoke architecture, add the ignoreDifferences to your ArgoCD ApplicationSet:
+For hub-spoke architectures, add the ignoreDifferences to your ArgoCD ApplicationSet:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1

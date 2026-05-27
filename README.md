@@ -156,9 +156,9 @@ make generate manifests
 | `KairosAgent` | AI autonomous optimization agent | mode, aiModel, watch.namespaceSuffix, correctionPolicy |
 | `KairosConsole` | Multi-cluster governance console | route, auth, clusters |
 
-## Integration with platform-hub-spoke-config
+## Integration with Multi-cluster Environments
 
-Kairos integrates as a component in the [platform-hub-spoke-config](https://github.com/maximilianoPizarro/platform-hub-spoke-config) Helm chart at sync wave 7, namespace `kairos-system`.
+Kairos integrates as a component in Helm-based multi-cluster GitOps platforms at sync wave 7, namespace `kairos-system`.
 
 ## Documentation
 

@@ -17,9 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -93,7 +95,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Health endpoints
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
@@ -103,14 +104,14 @@ func main() {
 		fmt.Fprint(w, "ok")
 	})
 
-	// API endpoints
 	mux.HandleFunc("/api/v1/agents", handleAgents)
 	mux.HandleFunc("/api/v1/policies", handlePolicies)
 	mux.HandleFunc("/api/v1/events", handleEvents)
 	mux.HandleFunc("/api/v1/clusters", handleClusters)
 	mux.HandleFunc("/api/v1/status", handleStatus)
+	mux.HandleFunc("/api/v1/observability", handleObservability)
+	mux.HandleFunc("/api/v1/metrics/query", handleMetricsQuery)
 
-	// WebSocket endpoint
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -130,7 +131,6 @@ func main() {
 		}()
 	})
 
-	// Serve static frontend files - prefer filesystem over embedded
 	var fileHandler http.Handler
 	if _, statErr := os.Stat("/static/index.html"); statErr == nil {
 		fileHandler = http.FileServer(http.Dir("/static"))
@@ -154,17 +154,177 @@ func main() {
 	}
 }
 
+func getServiceAccountToken() string {
+	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+func getThanosEndpoint() string {
+	ep := os.Getenv("THANOS_ENDPOINT")
+	if ep != "" {
+		return ep
+	}
+	return "https://thanos-querier.openshift-monitoring.svc:9091"
+}
+
+func getOTelEndpoint() string {
+	ep := os.Getenv("OTEL_ENDPOINT")
+	if ep != "" {
+		return ep
+	}
+	return "kairos-otel-collector.kairos-system.svc:4317"
+}
+
+func queryThanos(query string) ([]byte, error) {
+	token := getServiceAccountToken()
+	endpoint := getThanosEndpoint()
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	url := fmt.Sprintf("%s/api/v1/query?query=%s", endpoint, query)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	return io.ReadAll(resp.Body)
+}
+
+func handleObservability(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	thanosStatus := "disconnected"
+	thanosMetrics := 0
+	otelStatus := "not configured"
+
+	// Check Thanos connectivity
+	data, err := queryThanos("up")
+	if err == nil {
+		var result map[string]interface{}
+		if json.Unmarshal(data, &result) == nil {
+			if status, ok := result["status"].(string); ok && status == "success" {
+				thanosStatus = "connected"
+				if d, ok := result["data"].(map[string]interface{}); ok {
+					if results, ok := d["result"].([]interface{}); ok {
+						thanosMetrics = len(results)
+					}
+				}
+			}
+		}
+	}
+
+	// Check OTel endpoint
+	otelEp := getOTelEndpoint()
+	if otelEp != "" {
+		otelStatus = "configured"
+	}
+
+	observability := map[string]interface{}{
+		"thanos": map[string]interface{}{
+			"status":       thanosStatus,
+			"endpoint":     getThanosEndpoint(),
+			"activeTargets": thanosMetrics,
+		},
+		"opentelemetry": map[string]interface{}{
+			"status":   otelStatus,
+			"endpoint": otelEp,
+			"protocol": "gRPC/OTLP",
+			"port":     4317,
+		},
+		"metricsSource": func() string {
+			if otelStatus == "connected" {
+				return "OpenTelemetry"
+			}
+			if thanosStatus == "connected" {
+				return "Thanos"
+			}
+			return "none"
+		}(),
+		"pipelines": []map[string]interface{}{
+			{
+				"name":      "metrics",
+				"receivers": []string{"otlp", "prometheus"},
+				"exporters": []string{"debug"},
+				"status":    "active",
+			},
+		},
+	}
+
+	json.NewEncoder(w).Encode(observability)
+}
+
+func handleMetricsQuery(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	query := r.URL.Query().Get("query")
+	if query == "" {
+		query = "up{job=\"kubelet\"}"
+	}
+
+	data, err := queryThanos(query)
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "error",
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	w.Write(data)
+}
+
 func handleAgents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	agents := []map[string]interface{}{
 		{
-			"name":            "agent-east-edge",
-			"namespace":       "kairos-system",
-			"mode":            "autopilot",
-			"phase":           "Active",
+			"name":             "hub-agent",
+			"namespace":        "kairos-system",
+			"cluster":          "hub",
+			"mode":             "supervised",
+			"phase":            "Active",
+			"watchedResources": 8,
+			"totalCorrections": 0,
+			"lastCheck":        time.Now().Add(-30 * time.Second),
+			"aiModel":          "deepseek-r1-distill-qwen-14b",
+		},
+		{
+			"name":             "east-agent",
+			"namespace":        "kairos-system",
+			"cluster":          "east",
+			"mode":             "autopilot",
+			"phase":            "Active",
 			"watchedResources": 12,
 			"totalCorrections": 3,
-			"lastCheck":       time.Now().Add(-30 * time.Second),
+			"lastCheck":        time.Now().Add(-45 * time.Second),
+			"aiModel":          "deepseek-r1-distill-qwen-14b",
+		},
+		{
+			"name":             "west-agent",
+			"namespace":        "kairos-system",
+			"cluster":          "west",
+			"mode":             "autopilot",
+			"phase":            "Active",
+			"watchedResources": 10,
+			"totalCorrections": 1,
+			"lastCheck":        time.Now().Add(-20 * time.Second),
+			"aiModel":          "deepseek-r1-distill-qwen-14b",
 		},
 	}
 	json.NewEncoder(w).Encode(agents)
@@ -174,12 +334,15 @@ func handlePolicies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	policies := []map[string]interface{}{
 		{
-			"name":       "kafka-scaling",
-			"namespace":  "industrial-edge",
-			"target":     "factory-kafka",
-			"rules":      2,
-			"paused":     false,
-			"lastAction": time.Now().Add(-5 * time.Minute),
+			"name":             "demo-policy",
+			"namespace":        "kairos-system",
+			"cluster":          "hub",
+			"target":           "kairos-console",
+			"rules":            2,
+			"paused":           false,
+			"metricsSource":    "Thanos",
+			"prometheusEndpoint": "thanos-querier.openshift-monitoring.svc:9091",
+			"lastAction":       time.Now().Add(-5 * time.Minute),
 		},
 	}
 	json.NewEncoder(w).Encode(policies)
@@ -190,12 +353,30 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 	events := []map[string]interface{}{
 		{
 			"timestamp": time.Now().Add(-2 * time.Minute),
-			"type":      "ScalingApplied",
-			"resource":  "factory-kafka",
-			"namespace": "industrial-edge",
-			"action":    "IncreaseResources",
-			"detail":    "Memory increased from 2Gi to 2.5Gi",
+			"type":      "ScalingEvaluated",
+			"resource":  "kairos-console",
+			"namespace": "kairos-system",
+			"action":    "NoAction",
+			"detail":    "All metrics within threshold",
+			"cluster":   "hub",
+		},
+		{
+			"timestamp": time.Now().Add(-10 * time.Minute),
+			"type":      "AgentReconciled",
+			"resource":  "east-agent",
+			"namespace": "kairos-system",
+			"action":    "ResourceOptimized",
+			"detail":    "Memory request adjusted from 256Mi to 384Mi via AI recommendation",
 			"cluster":   "east",
+		},
+		{
+			"timestamp": time.Now().Add(-25 * time.Minute),
+			"type":      "PolicyCreated",
+			"resource":  "demo-policy",
+			"namespace": "kairos-system",
+			"action":    "Created",
+			"detail":    "SmartScalingPolicy targeting kairos-console with Thanos metrics",
+			"cluster":   "hub",
 		},
 	}
 	json.NewEncoder(w).Encode(events)
@@ -204,9 +385,9 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 func handleClusters(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	clusters := []map[string]interface{}{
-		{"name": "hub", "region": "central", "status": "healthy", "agents": 1, "policies": 3},
-		{"name": "east", "region": "east", "status": "healthy", "agents": 1, "policies": 2},
-		{"name": "west", "region": "west", "status": "healthy", "agents": 1, "policies": 2},
+		{"name": "hub", "region": "central", "status": "healthy", "agents": 1, "policies": 1, "apiURL": "https://api.cluster-xqg4c.dynamic2.redhatworkshops.io:6443"},
+		{"name": "east", "region": "us-east-2", "status": "healthy", "agents": 1, "policies": 0, "apiURL": "https://api.cluster-2847b.dynamic2.redhatworkshops.io:6443"},
+		{"name": "west", "region": "us-west-1", "status": "healthy", "agents": 1, "policies": 0, "apiURL": "https://api.cluster-5zjkk.dynamic2.redhatworkshops.io:6443"},
 	}
 	json.NewEncoder(w).Encode(clusters)
 }
@@ -216,9 +397,12 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
 		"operatorVersion": "0.1.0",
 		"totalAgents":     3,
-		"totalPolicies":   7,
-		"totalEvents":     42,
-		"uptime":          "2h34m",
+		"totalPolicies":   1,
+		"totalEvents":     3,
+		"uptime":          fmt.Sprintf("%dm", int(time.Since(startTime).Minutes())),
+		"metricsSource":   "Thanos Querier",
 	}
 	json.NewEncoder(w).Encode(status)
 }
+
+var startTime = time.Now()

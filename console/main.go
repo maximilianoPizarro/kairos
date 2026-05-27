@@ -542,7 +542,7 @@ func handleClusters(w http.ResponseWriter, r *http.Request) {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	status := map[string]interface{}{
-		"operatorVersion": "1.0.0",
+		"operatorVersion": "1.1.0",
 		"totalAgents":     3,
 		"totalPolicies":   1,
 		"totalEvents":     3,

@@ -30,7 +30,7 @@ import (
 
 const (
 	defaultTimeoutSeconds = 30
-	systemPrompt            = `You are a Kubernetes resource optimizer agent. Analyze workload metrics and current resource allocation, then recommend a scaling action.
+	systemPrompt          = `You are a Kubernetes resource optimizer agent. Analyze workload metrics and current resource allocation, then recommend a scaling action.
 
 Respond with a single JSON object only (no markdown fences) using this schema:
 {
@@ -182,7 +182,7 @@ func (c *openAIClient) GetScalingRecommendation(ctx context.Context, request Rec
 	if err != nil {
 		return nil, fmt.Errorf("call AI endpoint: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
@@ -228,7 +228,7 @@ func (c *openAIClient) IsAvailable(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices
 }

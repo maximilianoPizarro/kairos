@@ -37,13 +37,16 @@ const (
 	scaleTypeHorizontal = "horizontal"
 	scaleTypeBoth       = "both"
 
+	kindDeployment  = "Deployment"
+	kindStatefulSet = "StatefulSet"
+
 	defaultCooldownPeriod = 5 * time.Minute
 )
 
 var (
-	ErrCooldownActive      = errors.New("scaling action blocked by cooldown period")
+	ErrCooldownActive        = errors.New("scaling action blocked by cooldown period")
 	ErrUnsupportedTargetKind = errors.New("unsupported scaling target kind")
-	ErrNoScalingChanges    = errors.New("no scaling changes to apply")
+	ErrNoScalingChanges      = errors.New("no scaling changes to apply")
 )
 
 // ScaleAction describes a coordinated scaling change.
@@ -76,8 +79,8 @@ type Coordinator interface {
 }
 
 type coordinator struct {
-	client           client.Client
-	cooldownPeriod   time.Duration
+	client            client.Client
+	cooldownPeriod    time.Duration
 	verticalExhausted bool
 }
 
@@ -123,13 +126,13 @@ func (c *coordinator) ApplyScaling(ctx context.Context, target TargetInfo, actio
 
 func (c *coordinator) GetCurrentState(ctx context.Context, target TargetInfo) (*CurrentState, error) {
 	switch target.Kind {
-	case "Deployment":
+	case kindDeployment:
 		dep := &appsv1.Deployment{}
 		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, dep); err != nil {
 			return nil, err
 		}
 		return stateFromObject(dep.Spec.Replicas, dep.Spec.Template.Spec.Containers, dep.Annotations), nil
-	case "StatefulSet":
+	case kindStatefulSet:
 		sts := &appsv1.StatefulSet{}
 		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, sts); err != nil {
 			return nil, err
@@ -191,7 +194,7 @@ func (c *coordinator) applyPatch(
 	}
 
 	switch target.Kind {
-	case "Deployment":
+	case kindDeployment:
 		patch := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -222,7 +225,7 @@ func (c *coordinator) applyPatch(
 			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
 			client.ForceOwnership,
 		)
-	case "StatefulSet":
+	case kindStatefulSet:
 		patch := &appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -260,7 +263,7 @@ func (c *coordinator) applyPatch(
 
 func (c *coordinator) primaryContainerName(ctx context.Context, target TargetInfo) (string, error) {
 	switch target.Kind {
-	case "Deployment":
+	case kindDeployment:
 		dep := &appsv1.Deployment{}
 		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, dep); err != nil {
 			return "", err
@@ -269,7 +272,7 @@ func (c *coordinator) primaryContainerName(ctx context.Context, target TargetInf
 			return "", fmt.Errorf("deployment %s/%s has no containers", target.Namespace, target.Name)
 		}
 		return dep.Spec.Template.Spec.Containers[0].Name, nil
-	case "StatefulSet":
+	case kindStatefulSet:
 		sts := &appsv1.StatefulSet{}
 		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, sts); err != nil {
 			return "", err

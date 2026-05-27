@@ -27,8 +27,8 @@ import (
 	"github.com/robfig/cron/v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -214,8 +214,8 @@ func (r *SmartScalingPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 type workloadTarget struct {
-	kind       string
-	deployment *appsv1.Deployment
+	kind        string
+	deployment  *appsv1.Deployment
 	statefulSet *appsv1.StatefulSet
 }
 
@@ -231,22 +231,22 @@ func (r *SmartScalingPolicyReconciler) loadManagedWorkload(
 ) (*workloadTarget, bool, error) {
 	kind := policy.Spec.Target.Kind
 	if kind == "" {
-		kind = "Deployment"
+		kind = kindDeployment
 	}
 
 	switch kind {
-	case "Deployment":
+	case kindDeployment:
 		dep := &appsv1.Deployment{}
 		if err := r.Get(ctx, targetName, dep); err != nil {
 			return nil, false, fmt.Errorf("getting Deployment %s: %w", targetName, err)
 		}
-		return &workloadTarget{kind: "Deployment", deployment: dep}, isManagedResource(dep.Annotations), nil
-	case "StatefulSet":
+		return &workloadTarget{kind: kindDeployment, deployment: dep}, isManagedResource(dep.Annotations), nil
+	case kindStatefulSet:
 		sts := &appsv1.StatefulSet{}
 		if err := r.Get(ctx, targetName, sts); err != nil {
 			return nil, false, fmt.Errorf("getting StatefulSet %s: %w", targetName, err)
 		}
-		return &workloadTarget{kind: "StatefulSet", statefulSet: sts}, isManagedResource(sts.Annotations), nil
+		return &workloadTarget{kind: kindStatefulSet, statefulSet: sts}, isManagedResource(sts.Annotations), nil
 	default:
 		return nil, false, fmt.Errorf("unsupported target kind %q", kind)
 	}
@@ -275,12 +275,12 @@ func (r *SmartScalingPolicyReconciler) syncObservedState(policy *kairosv1alpha1.
 
 func (w *workloadTarget) replicaCount() int32 {
 	switch w.kind {
-	case "Deployment":
+	case kindDeployment:
 		if w.deployment.Spec.Replicas != nil {
 			return *w.deployment.Spec.Replicas
 		}
 		return 1
-	case "StatefulSet":
+	case kindStatefulSet:
 		if w.statefulSet.Spec.Replicas != nil {
 			return *w.statefulSet.Spec.Replicas
 		}
@@ -292,9 +292,9 @@ func (w *workloadTarget) replicaCount() int32 {
 
 func (w *workloadTarget) containers() []corev1.Container {
 	switch w.kind {
-	case "Deployment":
+	case kindDeployment:
 		return w.deployment.Spec.Template.Spec.Containers
-	case "StatefulSet":
+	case kindStatefulSet:
 		return w.statefulSet.Spec.Template.Spec.Containers
 	default:
 		return nil
@@ -303,9 +303,9 @@ func (w *workloadTarget) containers() []corev1.Container {
 
 func (w *workloadTarget) namespacedName() types.NamespacedName {
 	switch w.kind {
-	case "Deployment":
+	case kindDeployment:
 		return types.NamespacedName{Namespace: w.deployment.Namespace, Name: w.deployment.Name}
-	case "StatefulSet":
+	case kindStatefulSet:
 		return types.NamespacedName{Namespace: w.statefulSet.Namespace, Name: w.statefulSet.Name}
 	default:
 		return types.NamespacedName{}
@@ -317,8 +317,8 @@ func (r *SmartScalingPolicyReconciler) evaluateRules(
 	policy *kairosv1alpha1.SmartScalingPolicy,
 	now time.Time,
 ) ([]string, []plannedAction, []error) {
-	var activeRules []string
-	var actions []plannedAction
+	activeRules := make([]string, 0, len(policy.Spec.Rules))
+	actions := make([]plannedAction, 0, len(policy.Spec.Rules))
 	var evalErrs []error
 
 	for _, rule := range policy.Spec.Rules {
@@ -615,11 +615,11 @@ func (r *SmartScalingPolicyReconciler) applyReplicaCount(ctx context.Context, wo
 	namespace := workload.namespacedName().Namespace
 
 	switch workload.kind {
-	case "Deployment":
+	case kindDeployment:
 		dep := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
-				Kind:       "Deployment",
+				Kind:       kindDeployment,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -633,11 +633,11 @@ func (r *SmartScalingPolicyReconciler) applyReplicaCount(ctx context.Context, wo
 			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
 			client.ForceOwnership,
 		)
-	case "StatefulSet":
+	case kindStatefulSet:
 		sts := &appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
-				Kind:       "StatefulSet",
+				Kind:       kindStatefulSet,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -679,11 +679,11 @@ func (r *SmartScalingPolicyReconciler) applyContainerResources(
 	}
 
 	switch workload.kind {
-	case "Deployment":
+	case kindDeployment:
 		dep := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
-				Kind:       "Deployment",
+				Kind:       kindDeployment,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
@@ -697,11 +697,11 @@ func (r *SmartScalingPolicyReconciler) applyContainerResources(
 			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
 			client.ForceOwnership,
 		)
-	case "StatefulSet":
+	case kindStatefulSet:
 		sts := &appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "apps/v1",
-				Kind:       "StatefulSet",
+				Kind:       kindStatefulSet,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,

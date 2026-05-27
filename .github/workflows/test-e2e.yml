@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  CONTAINER_TOOL: docker
+
 jobs:
   test-e2e:
     name: Run on Ubuntu

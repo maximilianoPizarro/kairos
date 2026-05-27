@@ -35,12 +35,11 @@ import (
 )
 
 const (
-	defaultOTelPort        = "4317"
-	defaultPrometheusPort  = "9090"
-	defaultOTelEndpoint    = "otel-collector.observability:4317"
-	defaultPrometheusBase  = "http://prometheus:9090"
-	defaultRequestTimeout  = 10 * time.Second
-	defaultDialTimeout     = 5 * time.Second
+	defaultOTelPort       = "4317"
+	defaultPrometheusPort = "9090"
+	defaultOTelEndpoint   = "otel-collector.observability:4317"
+	defaultPrometheusBase = "http://prometheus:9090"
+	defaultRequestTimeout = 10 * time.Second
 )
 
 // MetricValue represents a single metric sample.
@@ -122,11 +121,7 @@ type otelClient struct {
 func newOTelClient(endpoint string) (*otelClient, error) {
 	normalized := normalizeOTelEndpoint(endpoint)
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultDialTimeout)
-	defer cancel()
-
-	conn, err := grpc.DialContext(
-		ctx,
+	conn, err := grpc.NewClient(
 		normalized,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -200,7 +195,7 @@ func (c *prometheusClient) QueryMetric(ctx context.Context, metric string, names
 	if err != nil {
 		return nil, fmt.Errorf("query prometheus at %s: %w", c.baseURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -230,7 +225,7 @@ func (c *prometheusClient) isHealthyEndpoint(ctx context.Context, endpoint strin
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, resp.Body)
 
 	return resp.StatusCode == http.StatusOK
@@ -331,7 +326,7 @@ type promQueryResponse struct {
 		ResultType string `json:"resultType"`
 		Result     []struct {
 			Metric map[string]string `json:"metric"`
-			Value  []json.RawMessage   `json:"value"`
+			Value  []json.RawMessage `json:"value"`
 		} `json:"result"`
 	} `json:"data"`
 }

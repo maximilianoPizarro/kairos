@@ -162,7 +162,7 @@ func (r *KairosConsoleReconciler) reconcileServiceAccount(ctx context.Context, c
 
 func (r *KairosConsoleReconciler) reconcileDeployment(ctx context.Context, console *kairosv1alpha1.KairosConsole, image string, replicas int32) error {
 	labels := map[string]string{
-		"app":                          consoleName(console),
+		"app":                         consoleName(console),
 		kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
 		kairosv1alpha1.LabelComponent: "console",
 	}

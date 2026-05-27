@@ -40,6 +40,11 @@ import (
 	"github.com/maximilianoPizarro/kairos/internal/ai"
 )
 
+const (
+	kindDeployment  = "Deployment"
+	kindStatefulSet = "StatefulSet"
+)
+
 // KairosAgentReconciler reconciles a KairosAgent object
 type KairosAgentReconciler struct {
 	client.Client
@@ -141,7 +146,7 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	for _, ns := range watchNamespaces {
 		for _, resType := range agent.Spec.Watch.ResourceTypes {
 			switch resType {
-			case "Deployment":
+			case kindDeployment:
 				deployments := &appsv1.DeploymentList{}
 				if err := r.List(ctx, deployments, client.InNamespace(ns)); err != nil {
 					log.Error(err, "Failed to list deployments", "namespace", ns)
@@ -158,7 +163,7 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 						corrections = append(corrections, *correction)
 					}
 				}
-			case "StatefulSet":
+			case kindStatefulSet:
 				statefulSets := &appsv1.StatefulSetList{}
 				if err := r.List(ctx, statefulSets, client.InNamespace(ns)); err != nil {
 					log.Error(err, "Failed to list statefulsets", "namespace", ns)

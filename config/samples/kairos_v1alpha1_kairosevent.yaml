@@ -1,0 +1,15 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: example-event
+  namespace: kairos-system
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
+spec:
+  agentName: my-agent
+  cluster: hub
+  action: scale_up
+  resource: my-app
+  namespace: default
+  reason: "CPU utilization exceeded 80% threshold"
+  dryRun: false

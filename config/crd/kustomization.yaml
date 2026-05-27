@@ -5,6 +5,7 @@ resources:
 - bases/kairos.maximilianopizarro.github.io_smartscalingpolicies.yaml
 - bases/kairos.maximilianopizarro.github.io_kairosagents.yaml
 - bases/kairos.maximilianopizarro.github.io_kairosconsoles.yaml
+- bases/kairos.maximilianopizarro.github.io_kairosevents.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

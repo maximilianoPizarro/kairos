@@ -3,4 +3,5 @@ resources:
 - kairos_v1alpha1_smartscalingpolicy.yaml
 - kairos_v1alpha1_kairosagent.yaml
 - kairos_v1alpha1_kairosconsole.yaml
+- kairos_v1alpha1_kairosevent.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

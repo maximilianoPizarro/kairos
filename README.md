@@ -164,15 +164,6 @@ Kairos integrates as a component in Helm-based multi-cluster GitOps platforms at
 
 Full documentation: https://maximilianoPizarro.github.io/kairos
 
-## GitHub Actions Variables
-
-Required secrets for CI/CD:
-
-| Secret | Purpose |
-|---|---|
-| `QUAY_USERNAME` | Quay.io registry username |
-| `QUAY_PASSWORD` | Quay.io registry password/token |
-
 ## License
 
 Apache License 2.0

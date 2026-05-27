@@ -1,0 +1,79 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Deep Insights
+    categories: "Application Runtime,Monitoring"
+    containerImage: quay.io/maximilianopizarro/kairos-operator:v0.1.0
+    description: Intelligent resource management with OpenTelemetry metrics and AI-powered autopilot for OpenShift
+    repository: https://github.com/maximilianoPizarro/kairos
+    support: Community
+  name: kairos-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: SmartScalingPolicy defines metric-based and schedule-based scaling rules
+      displayName: Smart Scaling Policy
+      kind: SmartScalingPolicy
+      name: smartscalingpolicies.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+    - description: KairosAgent defines an AI-powered autonomous optimization agent
+      displayName: Kairos Agent
+      kind: KairosAgent
+      name: kairosagents.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+    - description: KairosConsole defines the multi-cluster governance dashboard
+      displayName: Kairos Console
+      kind: KairosConsole
+      name: kairosconsoles.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+  description: |
+    # Kairos Operator
+
+    Intelligent resource management for OpenShift with OpenTelemetry metrics and AI-powered autopilot.
+
+    ## Features
+    - Smart Scaling Policies with metric-based rules
+    - AI-powered agents (DeepSeek, Granite, Qwen)
+    - OpenTelemetry native (gRPC/OTLP)
+    - ArgoCD compatible via Server-Side Apply
+    - Multi-cluster governance console
+  displayName: Kairos Operator
+  icon:
+  - base64data: ""
+    mediatype: image/svg+xml
+  install:
+    spec:
+      deployments: null
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - autoscaling
+  - opentelemetry
+  - ai
+  - resource-management
+  - multi-cluster
+  links:
+  - name: Documentation
+    url: https://maximilianoPizarro.github.io/kairos
+  - name: Source Code
+    url: https://github.com/maximilianoPizarro/kairos
+  maintainers:
+  - email: maximilianopizarro5@gmail.com
+    name: Maximiliano Pizarro
+  maturity: alpha
+  provider:
+    name: Maximiliano Pizarro
+    url: https://github.com/maximilianoPizarro
+  version: 0.0.0

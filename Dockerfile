@@ -1,9 +1,10 @@
 # Build the operator binary
-FROM registry.access.redhat.com/ubi9/go-toolset:1.22 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 
-WORKDIR /opt/app-root/src
+USER root
+WORKDIR /workspace
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -22,7 +23,7 @@ LABEL name="kairos-operator" \
       io.k8s.description="Smart scaling operator with AI support" \
       io.openshift.tags="operator,scaling,ai,otel"
 
-COPY --from=builder /opt/app-root/src/manager /manager
+COPY --from=builder /workspace/manager /manager
 
 USER 65532:65532
 ENTRYPOINT ["/manager"]

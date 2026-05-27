@@ -85,9 +85,9 @@ docs/pages/                - GitHub Pages documentation site
 make generate manifests        # Regenerate CRDs + RBAC after type changes
 make test                      # Unit tests
 make lint                      # golangci-lint
-make docker-build IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
-make docker-push IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
+make docker-build IMG=quay.io/maximilianopizarro/kairos-operator:v1.0.0
+make docker-push IMG=quay.io/maximilianopizarro/kairos-operator:v1.0.0
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.0.0
 
 # Console (multi-stage: Go backend + React frontend)
 podman build -f console/Dockerfile -t quay.io/maximilianopizarro/kairos-console:latest .

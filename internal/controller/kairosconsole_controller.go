@@ -27,7 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/util/workqueue"
@@ -53,6 +55,7 @@ type KairosConsoleReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
@@ -98,6 +101,14 @@ func (r *KairosConsoleReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.reconcileService(ctx, console); err != nil {
 		log.Error(err, "Failed to reconcile Service")
 		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+	}
+
+	// Reconcile Route
+	if console.Spec.Route.Enabled {
+		if err := r.reconcileRoute(ctx, console); err != nil {
+			log.Error(err, "Failed to reconcile Route")
+			return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+		}
 	}
 
 	// Check Deployment status
@@ -436,6 +447,84 @@ func (r *KairosConsoleReconciler) reconcileService(ctx context.Context, console 
 			existing.Annotations[k] = v
 		}
 	}
+	return r.Update(ctx, existing)
+}
+
+func (r *KairosConsoleReconciler) reconcileRoute(ctx context.Context, console *kairosv1alpha1.KairosConsole) error {
+	routeName := consoleName(console)
+
+	// Determine host: use spec.route.host or leave empty for wildcard
+	host := console.Spec.Route.Host
+
+	// Determine TLS and target port
+	targetPort := "http"
+	tlsTermination := "edge"
+	if r.isOAuthEnabled(console) {
+		targetPort = "https"
+		tlsTermination = "reencrypt"
+	}
+
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	})
+	route.SetName(routeName)
+	route.SetNamespace(console.Namespace)
+	route.SetLabels(map[string]string{
+		"app":                          routeName,
+		kairosv1alpha1.LabelManagedBy:  kairosv1alpha1.LabelManagedByValue,
+		kairosv1alpha1.LabelComponent:  "console",
+	})
+
+	spec := map[string]interface{}{
+		"to": map[string]interface{}{
+			"kind":   "Service",
+			"name":   routeName,
+			"weight": int64(100),
+		},
+		"port": map[string]interface{}{
+			"targetPort": targetPort,
+		},
+		"tls": map[string]interface{}{
+			"termination":                   tlsTermination,
+			"insecureEdgeTerminationPolicy": "Redirect",
+		},
+	}
+
+	if host != "" {
+		spec["host"] = host
+	}
+
+	route.Object["spec"] = spec
+
+	// Set owner reference
+	ownerRef := metav1.OwnerReference{
+		APIVersion: console.APIVersion,
+		Kind:       console.Kind,
+		Name:       console.Name,
+		UID:        console.UID,
+	}
+	route.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
+	existing := &unstructured.Unstructured{}
+	existing.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	})
+	err := r.Get(ctx, types.NamespacedName{Name: routeName, Namespace: console.Namespace}, existing)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return r.Create(ctx, route)
+		}
+		return err
+	}
+
+	// Update spec if needed
+	existing.Object["spec"] = spec
+	existing.SetLabels(route.GetLabels())
 	return r.Update(ctx, existing)
 }
 

@@ -19,7 +19,7 @@ FROM registry.access.redhat.com/ubi9/ubi-micro:latest
 
 LABEL name="kairos-console" \
       vendor="maximilianopizarro" \
-      version="0.1.0" \
+      version="1.0.0" \
       summary="Kairos Console - Multi-cluster governance dashboard" \
       description="Web console for visualizing Kairos agents, policies and scaling events across OpenShift clusters" \
       io.k8s.display-name="Kairos Console" \

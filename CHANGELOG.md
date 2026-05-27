@@ -2,7 +2,7 @@
 
 All notable changes to the Kairos Operator project are documented here.
 
-## [v0.1.0] - 2026-05-27
+## [v1.0.0] - 2026-05-27
 
 ### Initial Release
 
@@ -68,7 +68,7 @@ First public release of the Kairos Operator for OpenShift intelligent resource m
 
 | Image | Registry |
 |---|---|
-| `kairos-operator:v0.1.0` | quay.io/maximilianopizarro, ghcr.io/maximilianopizarro |
+| `kairos-operator:v1.0.0` | quay.io/maximilianopizarro, ghcr.io/maximilianopizarro |
 | `kairos-console:v0.1.7` | quay.io/maximilianopizarro |
 
 ### Known Limitations

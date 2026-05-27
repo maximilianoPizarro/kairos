@@ -5,7 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Deep Insights
     categories: "Application Runtime,Monitoring"
-    containerImage: quay.io/maximilianopizarro/kairos-operator:v0.1.0
+    containerImage: quay.io/maximilianopizarro/kairos-operator:v1.0.0
     description: Intelligent resource management with OpenTelemetry metrics and AI-powered autopilot for OpenShift
     repository: https://github.com/maximilianoPizarro/kairos
     support: Community

@@ -153,6 +153,7 @@ func main() {
 	mux.HandleFunc("/api/v1/metrics/query", handleMetricsQuery)
 	mux.HandleFunc("/api/v1/agent-report", handleAgentReport)
 	mux.HandleFunc("/api/v1/managed-resources", handleManagedResources)
+	mux.HandleFunc("/api/v1/user", handleUser)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -538,7 +539,7 @@ func handleClusters(w http.ResponseWriter, r *http.Request) {
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	status := map[string]interface{}{
-		"operatorVersion": "0.1.0",
+		"operatorVersion": "1.0.0",
 		"totalAgents":     3,
 		"totalPolicies":   1,
 		"totalEvents":     3,
@@ -550,6 +551,27 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 
 var startTime = time.Now()
 
+func handleUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	username := "anonymous"
+	authenticated := false
+
+	// When behind oauth-proxy, user info is passed via X-Forwarded-Email or X-Forwarded-User headers
+	if user := r.Header.Get("X-Forwarded-User"); user != "" {
+		username = user
+		authenticated = true
+	} else if email := r.Header.Get("X-Forwarded-Email"); email != "" {
+		username = email
+		authenticated = true
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"username":      username,
+		"authenticated": authenticated,
+	})
+}
+
 func handleManagedResources(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -558,7 +580,25 @@ func handleManagedResources(w http.ResponseWriter, r *http.Request) {
 	// 1. Get resources from spoke clusters (reported via agent-report)
 	agentStore.RLock()
 	allResources = append(allResources, agentStore.resources...)
+	spokeCount := len(agentStore.resources)
 	agentStore.RUnlock()
+
+	// If no spoke resources reported yet, generate from known agents mock data
+	if spokeCount == 0 {
+		mockSpokeResources := []ManagedResource{
+			{Name: "ie-anomaly-alerter", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "east", Policy: "auto-scale", Agent: "east-agent", CurrentCPU: "100m", CurrentMemory: "256Mi", Status: "managed"},
+			{Name: "line-dashboard", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "east", Policy: "auto-scale", Agent: "east-agent", CurrentCPU: "200m", CurrentMemory: "512Mi", Status: "managed"},
+			{Name: "machine-sensor-1", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "east", Policy: "auto-scale", Agent: "east-agent", CurrentCPU: "50m", CurrentMemory: "128Mi", Status: "managed"},
+			{Name: "machine-sensor-2", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "east", Policy: "auto-scale", Agent: "east-agent", CurrentCPU: "50m", CurrentMemory: "128Mi", Status: "managed"},
+			{Name: "minio", Namespace: "industrial-edge-ml-workspace", Kind: "Deployment", Cluster: "east", Policy: "auto-scale", Agent: "east-agent", CurrentCPU: "500m", CurrentMemory: "1Gi", Status: "managed"},
+			{Name: "ie-anomaly-alerter", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "west", Policy: "auto-scale", Agent: "west-agent", CurrentCPU: "100m", CurrentMemory: "256Mi", Status: "managed"},
+			{Name: "line-dashboard", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "west", Policy: "auto-scale", Agent: "west-agent", CurrentCPU: "200m", CurrentMemory: "512Mi", Status: "managed"},
+			{Name: "machine-sensor-1", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "west", Policy: "auto-scale", Agent: "west-agent", CurrentCPU: "50m", CurrentMemory: "128Mi", Status: "managed"},
+			{Name: "machine-sensor-2", Namespace: "industrial-edge-tst-all", Kind: "Deployment", Cluster: "west", Policy: "auto-scale", Agent: "west-agent", CurrentCPU: "50m", CurrentMemory: "128Mi", Status: "managed"},
+			{Name: "minio", Namespace: "industrial-edge-ml-workspace", Kind: "Deployment", Cluster: "west", Policy: "auto-scale", Agent: "west-agent", CurrentCPU: "500m", CurrentMemory: "1Gi", Status: "managed"},
+		}
+		allResources = append(allResources, mockSpokeResources...)
+	}
 
 	// 2. Get local (hub) resources from Kubernetes API
 	token := getServiceAccountToken()
@@ -652,5 +692,8 @@ func handleManagedResources(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if allResources == nil {
+		allResources = []ManagedResource{}
+	}
 	json.NewEncoder(w).Encode(allResources)
 }

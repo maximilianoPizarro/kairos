@@ -35,10 +35,10 @@
 
     .nav-tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 0;
       border-bottom: 2px solid #30363d;
       margin-bottom: 2rem;
-      overflow-x: auto;
     }
     .nav-tab {
       padding: 0.75rem 1.5rem;
@@ -536,7 +536,7 @@
           <line x1="325" y1="0" x2="345" y2="0" stroke="#00e5ff" stroke-width="1.5"/>
           <text x="355" y="3" font-family="monospace" font-size="9" fill="#8b949e">metrics flow</text>
         </g>
-        <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v0.1.0</text>
+        <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v1.0.0</text>
       </svg>
       <div class="img-caption">Click to enlarge — Hub + Spoke topology with centralized observability, AI model integration, and agent reporting</div>
     </div>
@@ -871,6 +871,193 @@ spec:
   - name: west
     region: us-west-1
     apiURL: "https://api.west-cluster:6443"</code></pre>
+
+    <h3>Complete Hub + Spoke Setup Guide</h3>
+    <div class="alert alert-info">
+      <strong>Architecture:</strong> The operator must be installed on ALL clusters (hub + spokes). The hub runs the console. Spoke agents report back to the hub console's <code>/api/v1/agent-report</code> endpoint.
+    </div>
+
+    <h4>Step 1: Install the Operator on ALL Clusters</h4>
+    <p>On each cluster (hub, east, west), run:</p>
+    <pre><code># Install CRDs + operator on each cluster
+make install
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.0.0</code></pre>
+
+    <h4>Step 2: Configure the Hub Cluster</h4>
+    <p>The hub needs the <strong>Console</strong> + a <strong>KairosAgent</strong> for local monitoring:</p>
+    <pre><code># --- KairosConsole (hub only) ---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosConsole
+metadata:
+  name: kairos
+  namespace: kairos-system
+spec:
+  replicas: 1
+  image: "quay.io/maximilianopizarro/kairos-console:v1.0.0"
+  route:
+    enabled: true
+    # If host is empty, OpenShift auto-assigns a wildcard route
+    host: "kairos-console.apps.your-hub-cluster.example.com"
+    tlsEnabled: true
+  auth:
+    type: none   # or openshift-oauth for production
+  clusters:
+  - name: hub
+    region: central
+    apiURL: "https://api.hub-cluster:6443"
+  - name: east
+    region: us-east-2
+    apiURL: "https://api.east-cluster:6443"
+  - name: west
+    region: us-west-1
+    apiURL: "https://api.west-cluster:6443"
+---
+# --- Hub KairosAgent (monitors local workloads) ---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: hub-agent
+  namespace: kairos-system
+spec:
+  mode: supervised
+  aiModel:
+    provider: "none"
+    endpoint: "http://localhost:8000"
+    apiURL: "http://localhost:8000"
+    model: "none"
+  watch:
+    namespaces:
+    - kairos-system
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    autoApply: false
+    requireApproval: true
+    maxScalePercent: 50
+    maxActionsPerHour: 10
+  reporting:
+    interval: "5m"
+    destination: console</code></pre>
+    <p>Then grant RBAC to the console ServiceAccount:</p>
+    <pre><code># Allow the console to query managed resources across all namespaces
+oc create clusterrole kairos-console-resources \
+  --verb=get,list,watch \
+  --resource=deployments.apps,statefulsets.apps,namespaces
+
+oc create clusterrolebinding kairos-console-resources-binding \
+  --clusterrole=kairos-console-resources \
+  --serviceaccount=kairos-system:kairos-console
+
+# Allow Thanos metrics access
+oc create clusterrolebinding kairos-console-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-console</code></pre>
+
+    <h4>Step 3: Configure Each Spoke Cluster Agent</h4>
+    <p>Each spoke cluster needs a <strong>KairosAgent</strong> that reports to the hub console:</p>
+    <pre><code># --- Spoke Agent (deploy on EAST cluster) ---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: east-agent
+  namespace: kairos-system
+spec:
+  mode: supervised    # or "autopilot" for auto-corrections
+  aiModel:
+    provider: "none"               # "openai" to enable AI
+    endpoint: "http://localhost:8000"
+    apiURL: "http://localhost:8000"
+    model: "none"
+  watch:
+    namespaces:                    # Explicit namespace list
+    - industrial-edge-tst-all
+    - industrial-edge-ml-workspace
+    - industrial-edge-data-lake
+    # OR use dynamic discovery:
+    # namespaceSuffix: "-prod"
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    autoApply: false
+    requireApproval: true
+    maxScalePercent: 50
+    maxActionsPerHour: 10
+  reporting:
+    interval: "5m"
+    destination: console
+  # THIS IS THE KEY: report back to the hub console
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.apps.your-hub-cluster.example.com"
+    clusterName: "east"
+    insecureSkipVerify: true   # Set to false in production with proper CA</code></pre>
+
+    <div class="alert alert-warning">
+      <strong>Important — hubReporting fields:</strong>
+      <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+        <li><code>endpoint</code>: The full URL of the hub console (must be reachable from the spoke cluster)</li>
+        <li><code>clusterName</code>: How this cluster appears in the console (e.g., "east", "west", "prod-us")</li>
+        <li><code>insecureSkipVerify</code>: Set to <code>true</code> for self-signed certs / air-gapped environments</li>
+        <li><code>tokenSecretRef</code> (optional): Bearer token secret for auth if hub console requires it</li>
+      </ul>
+    </div>
+
+    <h4>Step 4: Annotate Workloads on Spoke Clusters</h4>
+    <p>Mark Deployments/StatefulSets on spoke clusters that Kairos should manage and report:</p>
+    <pre><code># On the EAST cluster:
+oc annotate deployment ie-anomaly-alerter -n industrial-edge-tst-all kairos.io/managed="true"
+oc annotate deployment line-dashboard -n industrial-edge-tst-all kairos.io/managed="true"
+oc annotate deployment machine-sensor-1 -n industrial-edge-tst-all kairos.io/managed="true"
+oc annotate deployment machine-sensor-2 -n industrial-edge-tst-all kairos.io/managed="true"
+oc annotate deployment minio -n industrial-edge-ml-workspace kairos.io/managed="true"</code></pre>
+
+    <h4>Step 5: Verify End-to-End</h4>
+    <pre><code># On each cluster, verify agents:
+oc get kairosagent -n kairos-system
+NAME         MODE         PHASE    CORRECTIONS
+east-agent   supervised   Active   0
+
+# From the hub, verify console shows all clusters:
+curl -sk https://kairos-console.apps.hub.example.com/api/v1/agents | jq '.[].cluster'
+"hub"
+"east"
+"west"
+
+# Verify managed resources (multi-cluster view):
+curl -sk https://kairos-console.apps.hub.example.com/api/v1/managed-resources | jq '.[].cluster' | sort | uniq -c
+  1 "hub"
+  5 "east"
+  5 "west"</code></pre>
+
+    <h4>Data Flow Summary</h4>
+    <table>
+      <thead><tr><th>Direction</th><th>Protocol</th><th>Endpoint</th><th>Data</th></tr></thead>
+      <tbody>
+        <tr><td>Spoke → Hub</td><td>HTTPS POST</td><td><code>/api/v1/agent-report</code></td><td>Agent status, events, managed resources list</td></tr>
+        <tr><td>Hub → Local API</td><td>HTTPS (in-cluster)</td><td>Kubernetes API</td><td>Local annotated deployments/statefulsets</td></tr>
+        <tr><td>Console → Browser</td><td>HTTPS</td><td><code>/api/v1/managed-resources</code></td><td>Aggregated: local + all spoke reports</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Disconnected / Air-Gapped Environments</h4>
+    <pre><code># For environments without valid TLS certificates:
+spec:
+  hubReporting:
+    enabled: true
+    endpoint: "https://kairos-console.internal.local:8443"
+    clusterName: "factory-floor"
+    insecureSkipVerify: true    # ← Disables TLS verification
+
+# For AI model connections in disconnected environments:
+spec:
+  aiModel:
+    provider: "openai"
+    apiURL: "https://local-vllm.internal:8000/v1/chat/completions"
+    model: "granite-3.1-8b"
+    tls:
+      insecureSkipVerify: true  # ← Disables TLS for AI endpoint</code></pre>
   </div>
 
   <!-- OBSERVABILITY -->
@@ -1246,7 +1433,7 @@ curl -Ik https://kairos-console.apps.your-cluster.example.com
 oc apply -f config/crd/bases/
 
 # 2. Create namespace and deploy the operator
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.0.0
 
 # 3. Create AI credentials (optional — skip for metric-only mode)
 oc create secret generic kairos-ai-credentials \

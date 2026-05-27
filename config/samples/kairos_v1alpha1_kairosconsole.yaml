@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: kairos-operator
 spec:
   replicas: 1
-  image: "quay.io/maximilianopizarro/kairos-console:latest"
+  image: "quay.io/maximilianopizarro/kairos-console:v1.0.0"
   route:
     enabled: true
     host: "kairos-console.apps.your-cluster.example.com"
@@ -28,7 +28,7 @@ spec:
 #   namespace: kairos-system
 # spec:
 #   replicas: 1
-#   image: "quay.io/maximilianopizarro/kairos-console:latest"
+#   image: "quay.io/maximilianopizarro/kairos-console:v1.0.0"
 #   route:
 #     enabled: true
 #     host: "kairos-console.apps.your-cluster.example.com"

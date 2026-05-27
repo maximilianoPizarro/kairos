@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/maximilianopizarro/kairos-operator
-  newTag: v0.1.0
+  newTag: v1.0.0

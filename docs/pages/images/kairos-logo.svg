@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Kairos Operator">
+  <defs>
+    <linearGradient id="kairos-blue" x1="18%" y1="12%" x2="82%" y2="88%">
+      <stop offset="0%" stop-color="#1a237e"/>
+      <stop offset="100%" stop-color="#0277bd"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(0, -8)">
+    <!-- Kubernetes helm: 6-spoke wheel -->
+    <g fill="none" stroke="#3949ab" stroke-width="2.5" stroke-linecap="round" opacity="0.5">
+      <circle cx="128" cy="104" r="76"/>
+      <line x1="128" y1="104" x2="128" y2="28"/>
+      <line x1="128" y1="104" x2="193.8" y2="66"/>
+      <line x1="128" y1="104" x2="193.8" y2="142"/>
+      <line x1="128" y1="104" x2="128" y2="180"/>
+      <line x1="128" y1="104" x2="62.2" y2="142"/>
+      <line x1="128" y1="104" x2="62.2" y2="66"/>
+    </g>
+
+    <!-- Wing: swift opportune moment -->
+    <g fill="#00bcd4">
+      <path d="M46 82 C68 64, 96 56, 118 62 C94 70, 76 86, 66 102 C56 86, 50 84, 46 82 Z" opacity="0.3"/>
+      <path d="M40 98 C64 78, 94 70, 122 78 C98 88, 82 104, 72 118 C58 104, 46 100, 40 98 Z" opacity="0.55"/>
+      <path d="M34 114 C60 92, 92 84, 124 92 C100 104, 86 122, 76 136 C62 122, 44 116, 34 114 Z"/>
+    </g>
+
+    <!-- K stem -->
+    <rect x="82" y="50" width="16" height="106" rx="1" fill="url(#kairos-blue)"/>
+
+    <!-- Hourglass -->
+    <path
+      fill="url(#kairos-blue)"
+      d="M98 52 L166 52 L128 104 L166 156 L98 156 L128 104 Z"
+    />
+
+    <!-- K arms (cyan accent) -->
+    <path
+      fill="none"
+      stroke="#00bcd4"
+      stroke-width="5.5"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      d="M98 104 L166 52 M98 104 L166 156"
+    />
+
+    <!-- Opportune moment pivot -->
+    <circle cx="128" cy="104" r="6" fill="#00bcd4"/>
+    <circle cx="128" cy="104" r="2.5" fill="#1a237e"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text
+    x="128"
+    y="230"
+    text-anchor="middle"
+    fill="#1a237e"
+    font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+    font-size="21"
+    font-weight="700"
+    letter-spacing="7"
+  >KAIROS</text>
+</svg>

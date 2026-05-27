@@ -8,11 +8,14 @@ on:
 
 env:
   REGISTRY: quay.io
+  GHCR_REGISTRY: ghcr.io
   IMAGE_BASE: quay.io/maximilianopizarro
   OPERATOR_IMG: quay.io/maximilianopizarro/kairos-operator
   CONSOLE_IMG: quay.io/maximilianopizarro/kairos-console
   BUNDLE_IMG: quay.io/maximilianopizarro/kairos-operator-bundle
   CATALOG_IMG: quay.io/maximilianopizarro/kairos-operator-catalog
+  GHCR_OPERATOR_IMG: ghcr.io/maximilianopizarro/kairos-operator
+  GHCR_CONSOLE_IMG: ghcr.io/maximilianopizarro/kairos-console
   GO_VERSION: '1.23'
   OPERATOR_SDK_VERSION: 'v1.40.0'
 
@@ -56,6 +59,13 @@ jobs:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
+    - name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.GHCR_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Extract version from tag
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
@@ -64,11 +74,15 @@ jobs:
       run: |
         make docker-build IMG=${{ env.OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }} CONTAINER_TOOL=docker
         make docker-push IMG=${{ env.OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }} CONTAINER_TOOL=docker
+        docker tag ${{ env.OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.GHCR_OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }}
+        docker push ${{ env.GHCR_OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }}
 
     - name: Build and push console image
       run: |
         make docker-build-console CONSOLE_IMG=${{ env.CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }} CONTAINER_TOOL=docker
         make docker-push-console CONSOLE_IMG=${{ env.CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }} CONTAINER_TOOL=docker
+        docker tag ${{ env.CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.GHCR_CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }}
+        docker push ${{ env.GHCR_CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }}
 
     - name: Build and push bundle
       run: |
@@ -80,5 +94,9 @@ jobs:
       run: |
         docker tag ${{ env.OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.OPERATOR_IMG }}:latest
         docker tag ${{ env.CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.CONSOLE_IMG }}:latest
+        docker tag ${{ env.GHCR_OPERATOR_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.GHCR_OPERATOR_IMG }}:latest
+        docker tag ${{ env.GHCR_CONSOLE_IMG }}:v${{ steps.version.outputs.VERSION }} ${{ env.GHCR_CONSOLE_IMG }}:latest
         docker push ${{ env.OPERATOR_IMG }}:latest
         docker push ${{ env.CONSOLE_IMG }}:latest
+        docker push ${{ env.GHCR_OPERATOR_IMG }}:latest
+        docker push ${{ env.GHCR_CONSOLE_IMG }}:latest

@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" width="1000" height="700" role="img" aria-labelledby="title desc">
+  <title id="title">Kairos Smart Scaling Decision Flow</title>
+  <desc id="desc">Vertical flowchart showing metrics ingestion, policy evaluation, AI consultation, approval queue, Server-Side Apply, CRD status update, and console display.</desc>
+
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f0f23"/>
+      <stop offset="100%" stop-color="#1a1a2e"/>
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="decisionGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#312e81"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#00d4ff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <marker id="arrowDown" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+      <path d="M0,0 L5,10 L10,0 Z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+      <path d="M0,0 L5,10 L10,0 Z" fill="#00d4ff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+      <path d="M0,0 L5,10 L10,0 Z" fill="#00ff88"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+      <path d="M0,0 L5,10 L10,0 Z" fill="#ff6b35"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+      <path d="M0,0 L5,10 L10,0 Z" fill="#a855f7"/>
+    </marker>
+    <style>
+      .title { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 24px; font-weight: 700; fill: #f8fafc; }
+      .subtitle { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 12px; fill: #94a3b8; letter-spacing: 1.5px; }
+      .step-num { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; font-weight: 700; }
+      .label { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 600; fill: #e2e8f0; }
+      .sublabel { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 10px; fill: #94a3b8; }
+      .branch { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 600; }
+      .side-label { font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 9px; fill: #64748b; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1000" height="700" fill="url(#bgGrad)"/>
+  <rect width="1000" height="700" fill="url(#grid)"/>
+
+  <!-- Header -->
+  <text x="500" y="42" text-anchor="middle" class="title">Smart Scaling Decision Flow</text>
+  <text x="500" y="62" text-anchor="middle" class="subtitle">SmartScalingPolicy &#183; OTel &#183; AI &#183; Server-Side Apply</text>
+  <line x1="250" y1="74" x2="750" y2="74" stroke="url(#accentLine)" stroke-width="1.5"/>
+
+  <!-- Vertical spine -->
+  <line x1="500" y1="90" x2="500" y2="660" stroke="#334155" stroke-width="1" stroke-dasharray="2 6" opacity="0.5"/>
+
+  <!-- Helper: connector down -->
+  <!-- Step 1: Metrics arrive -->
+  <g filter="url(#shadow)">
+    <rect x="350" y="88" width="300" height="58" rx="12" fill="url(#nodeGrad)" stroke="#00ff88" stroke-width="1.5"/>
+    <circle cx="375" cy="117" r="14" fill="#00ff88" fill-opacity="0.15" stroke="#00ff88" stroke-width="1"/>
+    <text x="375" y="121" text-anchor="middle" class="step-num" fill="#00ff88">1</text>
+    <text x="500" y="112" text-anchor="middle" class="label" fill="#00ff88">Metrics Arrive</text>
+    <text x="500" y="130" text-anchor="middle" class="sublabel">OTel Collector &#183; Prometheus &#183; gRPC</text>
+  </g>
+  <line x1="500" y1="146" x2="500" y2="162" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowDown)"/>
+
+  <!-- Step 2: Policy evaluates -->
+  <g filter="url(#shadow)">
+    <rect x="350" y="162" width="300" height="58" rx="12" fill="url(#nodeGrad)" stroke="#00d4ff" stroke-width="1.5"/>
+    <circle cx="375" cy="191" r="14" fill="#00d4ff" fill-opacity="0.15" stroke="#00d4ff" stroke-width="1"/>
+    <text x="375" y="195" text-anchor="middle" class="step-num" fill="#00d4ff">2</text>
+    <text x="500" y="186" text-anchor="middle" class="label" fill="#00d4ff">SmartScalingPolicy Evaluates</text>
+    <text x="500" y="204" text-anchor="middle" class="sublabel">Threshold rules &#183; schedules &#183; cooldowns</text>
+  </g>
+  <line x1="500" y1="220" x2="500" y2="248" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowDown)"/>
+
+  <!-- Step 3: Decision diamond -->
+  <g filter="url(#shadow)">
+    <polygon points="500,248 620,296 500,344 380,296" fill="url(#decisionGrad)" stroke="#a855f7" stroke-width="1.5"/>
+    <circle cx="395" cy="296" r="14" fill="#a855f7" fill-opacity="0.2" stroke="#a855f7" stroke-width="1"/>
+    <text x="395" y="300" text-anchor="middle" class="step-num" fill="#a855f7">3</text>
+    <text x="510" y="292" text-anchor="middle" class="label" fill="#c4b5fd">Threshold</text>
+    <text x="510" y="308" text-anchor="middle" class="label" fill="#c4b5fd">Exceeded?</text>
+  </g>
+
+  <!-- No branch -->
+  <path d="M620 296 L720 296" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowDown)" transform="rotate(0)"/>
+  <line x1="620" y1="296" x2="700" y2="296" stroke="#64748b" stroke-width="1.5"/>
+  <polygon points="700,296 710,291 710,301" fill="#64748b"/>
+  <rect x="710" y="278" width="120" height="36" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+  <text x="770" y="294" text-anchor="middle" class="branch" fill="#64748b">NO</text>
+  <text x="770" y="308" text-anchor="middle" class="sublabel">Continue monitoring</text>
+
+  <!-- Yes branch down -->
+  <line x1="500" y1="344" x2="500" y2="368" stroke="#00ff88" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <text x="518" y="360" class="branch" fill="#00ff88">YES</text>
+
+  <!-- Step 4: AI enabled? -->
+  <g filter="url(#shadow)">
+    <rect x="350" y="368" width="300" height="58" rx="12" fill="url(#nodeGrad)" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <circle cx="375" cy="397" r="14" fill="#ff6b35" fill-opacity="0.15" stroke="#ff6b35" stroke-width="1"/>
+    <text x="375" y="401" text-anchor="middle" class="step-num" fill="#ff6b35">4</text>
+    <text x="500" y="390" text-anchor="middle" class="label" fill="#ff6b35">AI Enabled?</text>
+    <text x="500" y="408" text-anchor="middle" class="sublabel">Consult AI model &#8594; scaling recommendation</text>
+  </g>
+
+  <!-- AI side branch -->
+  <path d="M650 397 L760 397 L760 430" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <rect x="760" y="410" width="170" height="44" rx="10" fill="#0f172a" stroke="#ff6b35" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="845" y="430" text-anchor="middle" class="label" fill="#ff6b35">AI Model</text>
+  <text x="845" y="446" text-anchor="middle" class="sublabel">CPU/Memory recommendation</text>
+  <path d="M760 454 L500 454 L500 432" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <polygon points="500,432 505,442 495,442" fill="#ff6b35"/>
+
+  <line x1="500" y1="426" x2="500" y2="448" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowDown)"/>
+
+  <!-- Step 5: Mode decision -->
+  <g filter="url(#shadow)">
+    <polygon points="500,448 630,498 500,548 370,498" fill="url(#decisionGrad)" stroke="#a855f7" stroke-width="1.5"/>
+    <circle cx="388" cy="498" r="14" fill="#a855f7" fill-opacity="0.2" stroke="#a855f7" stroke-width="1"/>
+    <text x="388" y="502" text-anchor="middle" class="step-num" fill="#a855f7">5</text>
+    <text x="510" y="494" text-anchor="middle" class="label" fill="#c4b5fd">Scaling Mode?</text>
+    <text x="510" y="510" text-anchor="middle" class="sublabel">supervised &#183; autopilot</text>
+  </g>
+
+  <!-- Supervised branch (left) -->
+  <line x1="370" y1="498" x2="200" y2="498" stroke="#a855f7" stroke-width="1.5"/>
+  <polygon points="200,498 210,493 210,503" fill="#a855f7"/>
+  <rect x="60" y="472" width="140" height="52" rx="10" fill="#0f172a" stroke="#a855f7" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="130" y="494" text-anchor="middle" class="label" fill="#a855f7">Supervised</text>
+  <text x="130" y="510" text-anchor="middle" class="sublabel">Queue for approval</text>
+  <text x="130" y="458" text-anchor="middle" class="branch" fill="#a855f7">SUPERVISED</text>
+
+  <!-- Autopilot branch (right) -->
+  <line x1="630" y1="498" x2="780" y2="498" stroke="#00ff88" stroke-width="1.5"/>
+  <polygon points="780,498 770,493 770,503" fill="#00ff88"/>
+  <text x="700" y="488" text-anchor="middle" class="branch" fill="#00ff88">AUTOPILOT</text>
+
+  <!-- Converge to step 6 -->
+  <path d="M130 524 L130 580 L440 580" fill="none" stroke="#a855f7" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <path d="M780 524 L780 560 L560 560 L560 548" fill="none" stroke="#00ff88" stroke-width="1.5"/>
+
+  <line x1="500" y1="548" x2="500" y2="568" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+
+  <!-- Step 6: Apply via SSA -->
+  <g filter="url(#shadow)">
+    <rect x="330" y="568" width="340" height="58" rx="12" fill="url(#nodeGrad)" stroke="#00d4ff" stroke-width="2" filter="url(#glow)"/>
+    <circle cx="355" cy="597" r="14" fill="#00d4ff" fill-opacity="0.15" stroke="#00d4ff" stroke-width="1"/>
+    <text x="355" y="601" text-anchor="middle" class="step-num" fill="#00d4ff">6</text>
+    <text x="510" y="590" text-anchor="middle" class="label" fill="#00d4ff">Apply via Server-Side Apply</text>
+    <text x="510" y="608" text-anchor="middle" class="sublabel">field manager: kairos-operator &#183; resources only</text>
+  </g>
+  <line x1="500" y1="626" x2="500" y2="642" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowDown)"/>
+
+  <!-- Steps 7 & 8 side by side -->
+  <g filter="url(#shadow)">
+    <rect x="200" y="642" width="220" height="52" rx="12" fill="url(#nodeGrad)" stroke="#00ff88" stroke-width="1.5"/>
+    <circle cx="225" cy="668" r="13" fill="#00ff88" fill-opacity="0.15" stroke="#00ff88" stroke-width="1"/>
+    <text x="225" y="672" text-anchor="middle" class="step-num" fill="#00ff88">7</text>
+    <text x="325" y="662" text-anchor="middle" class="label" fill="#00ff88">Update CRD Status</text>
+    <text x="325" y="678" text-anchor="middle" class="sublabel">SmartScalingPolicy.status</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="580" y="642" width="220" height="52" rx="12" fill="url(#nodeGrad)" stroke="#a855f7" stroke-width="1.5"/>
+    <circle cx="605" cy="668" r="13" fill="#a855f7" fill-opacity="0.15" stroke="#a855f7" stroke-width="1"/>
+    <text x="605" y="672" text-anchor="middle" class="step-num" fill="#a855f7">8</text>
+    <text x="705" y="662" text-anchor="middle" class="label" fill="#a855f7">Console Displays Event</text>
+    <text x="705" y="678" text-anchor="middle" class="sublabel">Dashboard  &#183;  audit trail</text>
+  </g>
+
+  <!-- Connect 6 to 7 and 8 -->
+  <path d="M440 626 L310 626 L310 642" fill="none" stroke="#00ff88" stroke-width="1.2" marker-end="url(#arrowGreen)"/>
+  <path d="M560 626 L690 626 L690 642" fill="none" stroke="#a855f7" stroke-width="1.2" marker-end="url(#arrowPurple)"/>
+
+  <!-- Connect 7 to 8 -->
+  <line x1="420" y1="668" x2="580" y2="668" stroke="#64748b" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+  <text x="500" y="662" text-anchor="middle" class="side-label">status watch</text>
+
+  <!-- Left panel: flow summary -->
+  <rect x="40" y="88" width="130" height="280" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+  <text x="105" y="112" text-anchor="middle" class="label" fill="#00d4ff">Pipeline</text>
+  <line x1="55" y1="122" x2="155" y2="122" stroke="#334155" stroke-width="1"/>
+  <text x="55" y="142" class="sublabel" fill="#00ff88"> &#183;  Ingest</text>
+  <text x="55" y="162" class="sublabel" fill="#00d4ff"> &#183;  Evaluate</text>
+  <text x="55" y="182" class="sublabel" fill="#a855f7"> &#183;  Decide</text>
+  <text x="55" y="202" class="sublabel" fill="#ff6b35"> &#183;  Advise (opt)</text>
+  <text x="55" y="222" class="sublabel" fill="#a855f7"> &#183;  Approve / Auto</text>
+  <text x="55" y="242" class="sublabel" fill="#00d4ff"> &#183;  Apply (SSA)</text>
+  <text x="55" y="262" class="sublabel" fill="#00ff88"> &#183;  Persist</text>
+  <text x="55" y="282" class="sublabel" fill="#a855f7"> &#183;  Notify</text>
+  <rect x="55" y="300" width="100" height="52" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+  <text x="105" y="320" text-anchor="middle" class="sublabel" fill="#64748b">ArgoCD-safe</text>
+  <text x="105" y="336" text-anchor="middle" class="sublabel" fill="#64748b">resources field only</text>
+
+  <!-- Right panel: modes -->
+  <rect x="830" y="88" width="130" height="130" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1"/>
+  <text x="895" y="112" text-anchor="middle" class="label" fill="#94a3b8">Modes</text>
+  <rect x="845" y="124" width="100" height="24" rx="6" fill="#a855f7" fill-opacity="0.12" stroke="#a855f7" stroke-width="1"/>
+  <text x="895" y="140" text-anchor="middle" class="sublabel" fill="#a855f7">Supervised</text>
+  <rect x="845" y="156" width="100" height="24" rx="6" fill="#00ff88" fill-opacity="0.12" stroke="#00ff88" stroke-width="1"/>
+  <text x="895" y="172" text-anchor="middle" class="sublabel" fill="#00ff88">Autopilot</text>
+  <rect x="845" y="188" width="100" height="24" rx="6" fill="#ff6b35" fill-opacity="0.08" stroke="#ff6b35" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="895" y="204" text-anchor="middle" class="sublabel" fill="#ff6b35">+ AI (optional)</text>
+</svg>

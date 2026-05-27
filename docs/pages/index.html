@@ -1,301 +1,653 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kairos Operator - καιρός - The Opportune Moment</title>
-    <style>
-        :root {
-            --bg-primary: #0f0f23;
-            --bg-secondary: #1a1a2e;
-            --bg-card: #16213e;
-            --text-primary: #e0e0e0;
-            --text-secondary: #a0a0a0;
-            --accent-cyan: #00d4ff;
-            --accent-green: #00ff88;
-            --accent-orange: #ff6b35;
-            --accent-purple: #a855f7;
-            --border: #2a2a4a;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-        .hero {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
-            border-bottom: 1px solid var(--border);
-        }
-        .hero img { width: 120px; height: 120px; margin-bottom: 1.5rem; }
-        .hero h1 { font-size: 3rem; color: var(--accent-cyan); margin-bottom: 0.5rem; }
-        .hero .greek { font-size: 1.5rem; color: var(--accent-purple); font-style: italic; margin-bottom: 0.5rem; }
-        .hero .tagline { font-size: 1.2rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; }
-        .hero .quote {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: var(--bg-card);
-            border-left: 4px solid var(--accent-orange);
-            border-radius: 0 8px 8px 0;
-            display: inline-block;
-            text-align: left;
-            max-width: 600px;
-        }
-        .hero .quote p { color: var(--text-secondary); font-style: italic; }
-        .hero .quote cite { color: var(--accent-orange); font-size: 0.9rem; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        .section { margin: 3rem 0; }
-        .section h2 {
-            font-size: 2rem;
-            color: var(--accent-cyan);
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--border);
-        }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: border-color 0.3s;
-        }
-        .card:hover { border-color: var(--accent-cyan); }
-        .card h3 { color: var(--accent-green); margin-bottom: 0.5rem; }
-        .card p { color: var(--text-secondary); }
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin: 0.25rem;
-        }
-        .badge-cyan { background: rgba(0,212,255,0.15); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
-        .badge-green { background: rgba(0,255,136,0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
-        .badge-orange { background: rgba(255,107,53,0.15); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
-        .badge-purple { background: rgba(168,85,247,0.15); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
-        .diagram-container {
-            margin: 2rem 0;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        .diagram-container img { width: 100%; height: auto; display: block; }
-        .code-block {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-        .code-block pre { color: var(--text-primary); font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.85rem; }
-        .highlight-cyan { color: var(--accent-cyan); }
-        .highlight-green { color: var(--accent-green); }
-        .highlight-orange { color: var(--accent-orange); }
-        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--accent-cyan); background: var(--bg-secondary); }
-        a { color: var(--accent-cyan); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .cta {
-            display: inline-block;
-            padding: 0.75rem 2rem;
-            background: var(--accent-cyan);
-            color: var(--bg-primary);
-            border-radius: 8px;
-            font-weight: 600;
-            margin: 0.5rem;
-            transition: opacity 0.3s;
-        }
-        .cta:hover { opacity: 0.9; text-decoration: none; }
-        .namespace-demo {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin: 1rem 0;
-        }
-        .ns-tag {
-            padding: 0.4rem 1rem;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
-        .ns-dev { background: rgba(0,212,255,0.2); color: var(--accent-cyan); }
-        .ns-test { background: rgba(168,85,247,0.2); color: var(--accent-purple); }
-        .ns-qa { background: rgba(255,107,53,0.2); color: var(--accent-orange); }
-        .ns-prod { background: rgba(0,255,136,0.2); color: var(--accent-green); }
-        footer {
-            text-align: center;
-            padding: 2rem;
-            border-top: 1px solid var(--border);
-            color: var(--text-secondary);
-            margin-top: 3rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairos Operator - Documentation</title>
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@5/patternfly.min.css">
+  <style>
+    :root {
+      --pf-v5-global--BackgroundColor--dark-100: #0d1117;
+      --pf-v5-global--BackgroundColor--dark-200: #161b22;
+    }
+    body {
+      background: var(--pf-v5-global--BackgroundColor--dark-100);
+      color: #c9d1d9;
+      font-family: 'RedHatText', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .hero {
+      text-align: center;
+      padding: 3rem 1rem;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
+      border-bottom: 1px solid #30363d;
+    }
+    .hero img { width: 120px; margin-bottom: 1rem; }
+    .hero h1 { color: #00e5ff; font-size: 2.5rem; margin: 0.5rem 0; }
+    .hero .subtitle { color: #8b949e; font-style: italic; max-width: 600px; margin: 0 auto; }
+    .hero .badges { margin-top: 1rem; }
+    .hero .badges img { margin: 0 0.25rem; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid #30363d;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    .nav-tab {
+      padding: 0.75rem 1.5rem;
+      color: #8b949e;
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .nav-tab:hover { color: #00e5ff; }
+    .nav-tab.active { color: #00e5ff; border-bottom-color: #00e5ff; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    h2 { color: #00e5ff; border-bottom: 1px solid #21262d; padding-bottom: 0.5rem; }
+    h3 { color: #7c4dff; }
+    h4 { color: #ffab40; }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title { color: #00e5ff; font-size: 1.1rem; margin-bottom: 0.75rem; font-weight: 600; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+    code {
+      background: #1a1a2e;
+      color: #00e5ff;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    pre {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    pre code { background: none; padding: 0; color: #c9d1d9; }
+
+    .label {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.3rem;
+    }
+    .label-green { background: rgba(0,230,118,0.15); color: #00e676; border: 1px solid #00e676; }
+    .label-blue { background: rgba(0,229,255,0.15); color: #00e5ff; border: 1px solid #00e5ff; }
+    .label-purple { background: rgba(124,77,255,0.15); color: #7c4dff; border: 1px solid #7c4dff; }
+    .label-orange { background: rgba(255,171,64,0.15); color: #ffab40; border: 1px solid #ffab40; }
+
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #00e5ff; background: #161b22; }
+    tr:hover { background: #1a1a2e; }
+
+    .img-container {
+      cursor: pointer;
+      margin: 1.5rem 0;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .img-container:hover { transform: scale(1.01); box-shadow: 0 0 20px rgba(0,229,255,0.2); }
+    .img-container img { width: 100%; display: block; }
+    .img-caption { padding: 0.5rem 1rem; background: #161b22; font-size: 0.85rem; color: #8b949e; }
+
+    /* Lightbox */
+    .lightbox {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .lightbox.active { display: flex; }
+    .lightbox img { max-width: 95vw; max-height: 95vh; border-radius: 8px; }
+
+    .alert {
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-left: 4px solid;
+    }
+    .alert-info { background: rgba(0,229,255,0.08); border-color: #00e5ff; }
+    .alert-success { background: rgba(0,230,118,0.08); border-color: #00e676; }
+    .alert-warning { background: rgba(255,171,64,0.08); border-color: #ffab40; }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      border-top: 1px solid #21262d;
+      color: #8b949e;
+      font-size: 0.85rem;
+    }
+    footer a { color: #00e5ff; text-decoration: none; }
+  </style>
 </head>
 <body>
-    <div class="hero">
-        <img src="images/kairos-logo.svg" alt="Kairos Logo">
-        <h1>Kairos Operator</h1>
-        <p class="greek">καιρός — The Opportune Moment</p>
-        <p class="tagline">
-            Intelligent resource scaling for OpenShift. AI-powered autopilot that knows
-            exactly when to act — not too early, not too late.
-        </p>
-        <div class="quote">
-            <p>"Kairos is the fleeting moment of opportunity — the instant when conditions
-            align perfectly for action. In infrastructure, it's the precise moment to scale
-            before latency spikes, and to release resources before waste accumulates."</p>
-            <cite>— Inspired by ancient Greek philosophy of time</cite>
-        </div>
-        <div style="margin-top: 2rem;">
-            <a href="https://github.com/maximilianoPizarro/kairos" class="cta">GitHub Repository</a>
-            <a href="#quickstart" class="cta" style="background: var(--accent-green);">Quick Start</a>
-        </div>
+
+<div class="hero">
+  <img src="images/kairos-logo.svg" alt="Kairos Logo">
+  <h1>Kairos Operator</h1>
+  <p class="subtitle">καιρός — The Opportune Moment. Intelligent resource management with OpenTelemetry metrics and AI-powered autopilot for OpenShift multi-cluster environments.</p>
+  <div class="badges">
+    <img src="https://img.shields.io/badge/OpenShift-4.14+-red?style=flat-square" alt="OpenShift">
+    <img src="https://img.shields.io/badge/Operator%20SDK-v1.40.0-blue?style=flat-square" alt="SDK">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square" alt="License">
+    <img src="https://img.shields.io/badge/AI-DeepSeek%20%7C%20Granite%20%7C%20Qwen-purple?style=flat-square" alt="AI">
+  </div>
+</div>
+
+<div class="container">
+  <div class="nav-tabs">
+    <a class="nav-tab active" onclick="showSection('overview')">Overview</a>
+    <a class="nav-tab" onclick="showSection('multicluster')">Multi-cluster</a>
+    <a class="nav-tab" onclick="showSection('observability')">Observability</a>
+    <a class="nav-tab" onclick="showSection('ai')">AI Configuration</a>
+    <a class="nav-tab" onclick="showSection('argocd')">ArgoCD</a>
+    <a class="nav-tab" onclick="showSection('install')">Installation</a>
+    <a class="nav-tab" onclick="showSection('crds')">CRDs</a>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="overview" class="section active">
+    <h2>Architecture</h2>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/architecture-overview.svg" alt="Architecture Overview">
+      <div class="img-caption">Click to enlarge — Kairos multi-cluster architecture with OTel, Thanos, and AI integration</div>
     </div>
 
-    <div class="container">
-        <div class="section">
-            <h2>Features</h2>
-            <div class="grid">
-                <div class="card">
-                    <h3>Smart Scaling Policies</h3>
-                    <p>Define metric-based and schedule-based scaling rules as Kubernetes CRDs. Coordinate vertical and horizontal scaling in a single reconciliation loop.</p>
-                    <div><span class="badge badge-cyan">CRD</span><span class="badge badge-green">OTel Native</span></div>
-                </div>
-                <div class="card">
-                    <h3>AI-Powered Agents</h3>
-                    <p>Optional integration with AI models (Granite, Nemotron, Qwen via vLLM/KServe) for autonomous resource optimization with guardrails.</p>
-                    <div><span class="badge badge-purple">Optional</span><span class="badge badge-orange">autopilot/supervised</span></div>
-                </div>
-                <div class="card">
-                    <h3>ArgoCD Compatible</h3>
-                    <p>Uses Server-Side Apply with field owner separation. Users leave <code>resources: {}</code> empty — zero sync conflicts.</p>
-                    <div><span class="badge badge-green">SSA</span><span class="badge badge-cyan">GitOps</span></div>
-                </div>
-                <div class="card">
-                    <h3>Namespace Suffix Filtering</h3>
-                    <p>Watch namespaces by suffix: <code>-dev</code>, <code>-test</code>, <code>-qa</code>, <code>-prod</code>. Agents automatically discover and monitor matching namespaces.</p>
-                    <div>
-                        <span class="badge badge-cyan">-dev</span>
-                        <span class="badge badge-purple">-test</span>
-                        <span class="badge badge-orange">-qa</span>
-                        <span class="badge badge-green">-prod</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>Governance Console</h3>
-                    <p>PatternFly 5 web dashboard for multi-cluster visibility. See agents, policies, events, and approvals in real-time via WebSocket.</p>
-                    <div><span class="badge badge-cyan">PatternFly 5</span><span class="badge badge-purple">Real-time</span></div>
-                </div>
-                <div class="card">
-                    <h3>Safe by Design</h3>
-                    <p>Rate limiting, cooldowns, max actions per hour, approval workflows for large changes, and automatic rollback on degradation.</p>
-                    <div><span class="badge badge-orange">Guardrails</span><span class="badge badge-green">Rollback</span></div>
-                </div>
-            </div>
-        </div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Smart Scaling Policies</div>
+        <p>Define metric-based and schedule-based scaling rules as Kubernetes CRDs. Rules evaluate OTel/Prometheus/Thanos metrics and trigger horizontal or vertical scaling.</p>
+        <span class="label label-blue">CRD</span>
+        <span class="label label-green">SSA</span>
+      </div>
+      <div class="card">
+        <div class="card-title">AI-Powered Agents</div>
+        <p>Optional integration with AI models (DeepSeek, Granite, Qwen) for autonomous resource optimization in autopilot or supervised mode.</p>
+        <span class="label label-purple">autopilot</span>
+        <span class="label label-orange">supervised</span>
+      </div>
+      <div class="card">
+        <div class="card-title">Governance Console</div>
+        <p>PatternFly 5 dashboard for real-time visualization of agents, policies, metrics, and events across all managed clusters.</p>
+        <span class="label label-blue">PatternFly 5</span>
+        <span class="label label-green">WebSocket</span>
+      </div>
+    </div>
 
-        <div class="section">
-            <h2>Architecture</h2>
-            <div class="diagram-container">
-                <img src="images/architecture-overview.svg" alt="Kairos Architecture Overview">
-            </div>
-        </div>
+    <h2>Scaling Decision Flow</h2>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/scaling-flow.svg" alt="Scaling Flow">
+      <div class="img-caption">Click to enlarge — From metrics ingestion to scaling action</div>
+    </div>
 
-        <div class="section">
-            <h2>Scaling Flow</h2>
-            <div class="diagram-container">
-                <img src="images/scaling-flow.svg" alt="Kairos Scaling Decision Flow">
-            </div>
-        </div>
+    <h2>Console: Dashboard View</h2>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshot-dashboard.svg" alt="Kairos Console Dashboard">
+      <div class="img-caption">Click to enlarge — Live console showing 3 clusters, 3 active agents (2 autopilot, 1 supervised), and recent scaling events</div>
+    </div>
+  </div>
 
-        <div class="section">
-            <h2>Namespace Suffix Mode</h2>
-            <p>Instead of listing namespaces manually, define a suffix and the agent automatically watches all matching namespaces:</p>
-            <div class="namespace-demo">
-                <span class="ns-tag ns-dev">orders-dev</span>
-                <span class="ns-tag ns-dev">payments-dev</span>
-                <span class="ns-tag ns-dev">users-dev</span>
-                <span class="ns-tag ns-test">orders-test</span>
-                <span class="ns-tag ns-test">payments-test</span>
-                <span class="ns-tag ns-qa">orders-qa</span>
-                <span class="ns-tag ns-qa">payments-qa</span>
-                <span class="ns-tag ns-prod">orders-prod</span>
-                <span class="ns-tag ns-prod">payments-prod</span>
-                <span class="ns-tag ns-prod">users-prod</span>
-            </div>
-            <div class="code-block"><pre><span class="highlight-cyan">apiVersion:</span> kairos.maximilianopizarro.github.io/v1alpha1
-<span class="highlight-cyan">kind:</span> KairosAgent
-<span class="highlight-cyan">metadata:</span>
-  <span class="highlight-green">name:</span> agent-production
-<span class="highlight-cyan">spec:</span>
-  <span class="highlight-green">mode:</span> supervised
-  <span class="highlight-green">watch:</span>
-    <span class="highlight-orange">namespaceSuffix:</span> "-prod"   <span class="highlight-green"># Watches ALL *-prod namespaces</span>
-    <span class="highlight-green">resourceTypes:</span>
+  <!-- MULTI-CLUSTER -->
+  <div id="multicluster" class="section">
+    <h2>Multi-cluster Governance</h2>
+
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/multicluster-observability.svg" alt="Multi-cluster Observability">
+      <div class="img-caption">Click to enlarge — Hub + Spoke topology with centralized observability</div>
+    </div>
+
+    <div class="alert alert-info">
+      Kairos uses a <strong>hub-spoke</strong> model: the operator runs on all clusters, the governance console runs on the hub, and metrics flow upward via Thanos federation or OTel collectors.
+    </div>
+
+    <h3>Topology</h3>
+    <table>
+      <thead><tr><th>Cluster</th><th>Role</th><th>Components</th><th>Agent Mode</th></tr></thead>
+      <tbody>
+        <tr><td><code>hub</code></td><td>Control plane</td><td>Operator + Console + Thanos Querier + OTel</td><td><span class="label label-blue">supervised</span></td></tr>
+        <tr><td><code>east</code></td><td>Workload</td><td>Operator + Prometheus</td><td><span class="label label-orange">autopilot</span></td></tr>
+        <tr><td><code>west</code></td><td>Workload</td><td>Operator + Prometheus</td><td><span class="label label-orange">autopilot</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Namespace Suffix Filtering</h3>
+    <p>Instead of maintaining static namespace lists, agents can dynamically discover namespaces by suffix:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: prod-agent
+spec:
+  mode: autopilot
+  watch:
+    namespaceSuffix: "-prod"    # Watches ALL *-prod namespaces
+    resourceTypes:
     - Deployment
-    - StatefulSet</pre></div>
-        </div>
+    - StatefulSet</code></pre>
 
-        <div class="section" id="quickstart">
-            <h2>Quick Start</h2>
-            <div class="code-block"><pre><span class="highlight-green"># 1. Install CRDs</span>
-kubectl apply -f config/crd/bases/
+    <h3>Console Access</h3>
+    <p>The governance console is deployed on the hub cluster with an OpenShift Route:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosConsole
+metadata:
+  name: kairos
+spec:
+  replicas: 1
+  route:
+    enabled: true
+    host: "kairos-console.apps.your-cluster.example.com"
+    tlsEnabled: true
+  auth:
+    type: none
+  clusters:
+  - name: hub
+    region: us-east-1
+    apiURL: "https://api.hub-cluster:6443"
+  - name: east
+    region: us-east-2
+    apiURL: "https://api.east-cluster:6443"
+  - name: west
+    region: us-west-1
+    apiURL: "https://api.west-cluster:6443"</code></pre>
+  </div>
 
-<span class="highlight-green"># 2. Create namespace and RBAC</span>
-kubectl apply -f config/samples/prereqs.yaml
+  <!-- OBSERVABILITY -->
+  <div id="observability" class="section">
+    <h2>Observability & Metrics</h2>
 
-<span class="highlight-green"># 3. Deploy the operator</span>
+    <div class="alert alert-success">
+      Kairos reads metrics from three sources in priority order: <strong>OpenTelemetry Collector</strong> (gRPC/OTLP) → <strong>Thanos Querier</strong> (PromQL) → <strong>Prometheus</strong> (fallback).
+    </div>
+
+    <h3>Metrics Source Priority</h3>
+    <table>
+      <thead><tr><th>Priority</th><th>Source</th><th>Protocol</th><th>Port</th><th>Use Case</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><span class="label label-orange">OpenTelemetry</span></td><td>gRPC/OTLP</td><td>4317</td><td>Primary — lowest latency, push-based</td></tr>
+        <tr><td>2</td><td><span class="label label-purple">Thanos Querier</span></td><td>PromQL/HTTPS</td><td>9091</td><td>Federated multi-cluster metrics (OpenShift built-in)</td></tr>
+        <tr><td>3</td><td><span class="label label-blue">Prometheus</span></td><td>PromQL/HTTP</td><td>9090</td><td>Single-cluster fallback</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Configuring OpenTelemetry Collector</h3>
+    <p>Deploy an <code>OpenTelemetryCollector</code> CR that scrapes Thanos and exposes OTLP gRPC for Kairos:</p>
+    <pre><code>apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: kairos-otel
+  namespace: kairos-system
+spec:
+  mode: deployment
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: thanos-federated
+            scrape_interval: 30s
+            scheme: https
+            tls_config:
+              insecure_skip_verify: true
+            bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+            static_configs:
+            - targets: ['thanos-querier.openshift-monitoring.svc:9091']
+    exporters:
+      debug: {}
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp, prometheus]
+          exporters: [debug]</code></pre>
+
+    <h3>Using Thanos Querier (OpenShift Built-in)</h3>
+    <div class="alert alert-info">
+      OpenShift clusters include Thanos Querier by default in <code>openshift-monitoring</code>. No additional installation required — just reference the endpoint in your SmartScalingPolicy.
+    </div>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: SmartScalingPolicy
+metadata:
+  name: my-policy
+spec:
+  target:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-app
+    namespace: my-namespace
+  prometheusEndpoint: "https://thanos-querier.openshift-monitoring.svc:9091"
+  rules:
+  - name: cpu-high
+    when:
+      metric: "container_cpu_usage_seconds_total"
+      operator: GreaterThan
+      threshold: "0.8"
+    action:
+      type: AddReplicas
+  - name: memory-high
+    when:
+      metric: "container_memory_working_set_bytes"
+      operator: GreaterThan
+      threshold: "512000000"
+    action:
+      type: SetResources
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "200m"</code></pre>
+
+    <h3>Console Observability View</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshot-observability.svg" alt="Console Observability View">
+      <div class="img-caption">Click to enlarge — Live Observability tab showing Thanos (connected, 220 targets), OTel Collector, pipelines, and kubelet metrics</div>
+    </div>
+    <p>The Kairos Console includes a dedicated <strong>Observability</strong> tab that shows:</p>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Thanos Status</div>
+        <table>
+          <tr><td>Endpoint</td><td><code>thanos-querier.openshift-monitoring.svc:9091</code></td></tr>
+          <tr><td>Status</td><td><span class="label label-green">connected</span></td></tr>
+          <tr><td>Active Targets</td><td>220</td></tr>
+          <tr><td>Protocol</td><td>PromQL over HTTPS</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">OpenTelemetry Status</div>
+        <table>
+          <tr><td>Endpoint</td><td><code>kairos-otel-collector.kairos-system.svc:4317</code></td></tr>
+          <tr><td>Status</td><td><span class="label label-blue">configured</span></td></tr>
+          <tr><td>Protocol</td><td>gRPC/OTLP</td></tr>
+          <tr><td>Port</td><td>4317</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h3>Metrics Pipeline</h3>
+    <div class="card">
+      <div class="card-title">Active Pipeline: metrics</div>
+      <table>
+        <tr><td>Receivers</td><td><span class="label label-blue">otlp</span> <span class="label label-purple">prometheus</span></td></tr>
+        <tr><td>Exporters</td><td><span class="label label-orange">debug</span></td></tr>
+        <tr><td>Status</td><td><span class="label label-green">active</span></td></tr>
+      </table>
+    </div>
+
+    <h3>Live Metrics Query</h3>
+    <p>The console proxies PromQL queries directly to Thanos via <code>/api/v1/metrics/query</code>:</p>
+    <pre><code># Query from the console API
+GET /api/v1/metrics/query?query=up{job="kubelet"}
+
+# Response: 18 active kubelet targets
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {"metric": {"instance": "10.10.10.10:10250", "job": "kubelet"}, "value": [1716832000, "1"]},
+      ...
+    ]
+  }
+}</code></pre>
+  </div>
+
+  <!-- AI -->
+  <div id="ai" class="section">
+    <h2>AI Model Configuration</h2>
+
+    <div class="alert alert-info">
+      AI integration is <strong>optional</strong>. Kairos works perfectly with only metric-based rules. Enable AI when you want autonomous recommendations based on workload patterns.
+    </div>
+
+    <h3>Supported Endpoints</h3>
+    <table>
+      <thead><tr><th>Platform</th><th>Protocol</th><th>Example URL</th></tr></thead>
+      <tbody>
+        <tr><td>LiteLLM</td><td>OpenAI-compatible</td><td><code>https://litellm.example.com/v1/chat/completions</code></td></tr>
+        <tr><td>vLLM</td><td>OpenAI-compatible</td><td><code>http://vllm-svc:8000/v1/chat/completions</code></td></tr>
+        <tr><td>KServe</td><td>OpenAI-compatible</td><td><code>https://model.kserve.example.com/v1/chat/completions</code></td></tr>
+        <tr><td>Ollama</td><td>OpenAI-compatible</td><td><code>http://ollama:11434/v1/chat/completions</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Configuration</h3>
+    <pre><code># 1. Create the credentials secret
+oc create secret generic kairos-ai-credentials \
+  -n kairos-system \
+  --from-literal=api-key=&lt;your-api-key&gt;
+
+# 2. Create the KairosAgent
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: prod-agent
+spec:
+  mode: autopilot
+  aiModel:
+    apiURL: "https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions"
+    model: "deepseek-r1-distill-qwen-14b"
+    secretRef:
+      name: kairos-ai-credentials
+      key: api-key
+  watch:
+    namespaceSuffix: "-prod"
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 10
+    rollbackOnFailure: true
+  reporting:
+    interval: "5m"</code></pre>
+
+    <h3>Agent Modes</h3>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="label label-orange">autopilot</span> Mode</div>
+        <p>AI recommendations are applied automatically without human intervention. Best for non-critical workloads or environments with high confidence in the model.</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="label label-blue">supervised</span> Mode</div>
+        <p>AI recommendations require human approval before being applied. Best for production workloads where changes need review.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARGOCD -->
+  <div id="argocd" class="section">
+    <h2>ArgoCD Coexistence</h2>
+
+    <div class="alert alert-warning">
+      Kairos uses <strong>Server-Side Apply (SSA)</strong> with explicit field ownership. It only manages the <code>resources</code> field — ArgoCD continues to own everything else.
+    </div>
+
+    <h3>Pattern</h3>
+    <pre><code># In your Git-managed manifests, leave resources empty:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-service
+  annotations:
+    kairos.io/managed: "true"
+spec:
+  template:
+    spec:
+      containers:
+      - name: app
+        image: my-image:latest
+        resources: {}   # ← Kairos manages this via SSA</code></pre>
+
+    <h3>ArgoCD Application Configuration</h3>
+    <pre><code>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+spec:
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jqPathExpressions:
+    - .spec.template.spec.containers[].resources</code></pre>
+
+    <h3>How It Works</h3>
+    <table>
+      <tr><td><strong>Kairos</strong></td><td>Owns <code>.spec.template.spec.containers[].resources</code> via SSA with field manager <code>kairos-operator</code></td></tr>
+      <tr><td><strong>ArgoCD</strong></td><td>Owns all other fields. Ignores differences on resources field.</td></tr>
+      <tr><td><strong>Result</strong></td><td>No sync conflicts. Both controllers coexist peacefully.</td></tr>
+    </table>
+  </div>
+
+  <!-- INSTALL -->
+  <div id="install" class="section">
+    <h2>Installation</h2>
+
+    <h3>Prerequisites</h3>
+    <ul>
+      <li>OpenShift 4.14+ or Kubernetes 1.25+</li>
+      <li>Cluster admin access</li>
+      <li>Red Hat build of OpenTelemetry (recommended, available via OperatorHub)</li>
+      <li>Thanos Querier (included by default in OpenShift monitoring stack)</li>
+    </ul>
+
+    <h3>Quick Start</h3>
+    <pre><code># 1. Install CRDs
+oc apply -f config/crd/bases/
+
+# 2. Create namespace, ServiceAccount, and RBAC
+oc apply -f config/samples/prereqs.yaml
+
+# 3. Deploy the operator
 make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
 
-<span class="highlight-green"># 4. Create a scaling policy</span>
-kubectl apply -f config/samples/kairos_v1alpha1_smartscalingpolicy.yaml
+# 4. Create AI credentials (optional)
+oc create secret generic kairos-ai-credentials \
+  -n kairos-system --from-literal=api-key=&lt;your-key&gt;
 
-<span class="highlight-green"># 5. (Optional) Deploy AI agent</span>
-kubectl apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
+# 5. Deploy an agent
+oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
 
-<span class="highlight-green"># 6. Deploy the console</span>
-kubectl apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml</pre></div>
-        </div>
+# 6. Deploy the console
+oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml</code></pre>
 
-        <div class="section">
-            <h2>Container Images</h2>
-            <table>
-                <thead><tr><th>Image</th><th>Purpose</th><th>Base</th></tr></thead>
-                <tbody>
-                    <tr><td><code>quay.io/maximilianopizarro/kairos-operator</code></td><td>Controller Manager</td><td>UBI9 Micro</td></tr>
-                    <tr><td><code>quay.io/maximilianopizarro/kairos-console</code></td><td>Governance Dashboard</td><td>UBI9 Micro</td></tr>
-                    <tr><td><code>quay.io/maximilianopizarro/kairos-operator-bundle</code></td><td>OLM Bundle</td><td>UBI9 Micro</td></tr>
-                    <tr><td><code>quay.io/maximilianopizarro/kairos-operator-catalog</code></td><td>OLM Catalog</td><td>OPM</td></tr>
-                </tbody>
-            </table>
-        </div>
+    <h3>Container Images</h3>
+    <table>
+      <thead><tr><th>Image</th><th>Purpose</th><th>Base</th></tr></thead>
+      <tbody>
+        <tr><td><code>quay.io/maximilianopizarro/kairos-operator</code></td><td>Controller manager</td><td>UBI9 Micro</td></tr>
+        <tr><td><code>quay.io/maximilianopizarro/kairos-console</code></td><td>Governance dashboard</td><td>UBI9 Micro</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-        <div class="section">
-            <h2>CRDs</h2>
-            <table>
-                <thead><tr><th>Kind</th><th>Purpose</th><th>Key Fields</th></tr></thead>
-                <tbody>
-                    <tr><td><code>SmartScalingPolicy</code></td><td>Metric & schedule scaling rules</td><td>target, rules, schedule, ai</td></tr>
-                    <tr><td><code>KairosAgent</code></td><td>AI autonomous agent</td><td>mode, aiModel, watch.namespaceSuffix, correctionPolicy</td></tr>
-                    <tr><td><code>KairosConsole</code></td><td>Governance web console</td><td>route, auth, clusters</td></tr>
-                </tbody>
-            </table>
-        </div>
+  <!-- CRDS -->
+  <div id="crds" class="section">
+    <h2>Custom Resource Definitions</h2>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">SmartScalingPolicy</div>
+        <p>Defines metric-based and schedule-based scaling rules.</p>
+        <table>
+          <tr><td><code>target</code></td><td>Workload reference</td></tr>
+          <tr><td><code>otelEndpoint</code></td><td>OTel gRPC address</td></tr>
+          <tr><td><code>prometheusEndpoint</code></td><td>Thanos/Prometheus URL</td></tr>
+          <tr><td><code>rules[]</code></td><td>Metric conditions + actions</td></tr>
+          <tr><td><code>schedule[]</code></td><td>Cron-based scaling</td></tr>
+          <tr><td><code>paused</code></td><td>Disable all actions</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">KairosAgent</div>
+        <p>AI-powered autonomous optimization agent.</p>
+        <table>
+          <tr><td><code>mode</code></td><td>autopilot / supervised</td></tr>
+          <tr><td><code>aiModel</code></td><td>API URL + model + secret</td></tr>
+          <tr><td><code>watch</code></td><td>Namespaces + suffix + types</td></tr>
+          <tr><td><code>correctionPolicy</code></td><td>Rate limits + rollback</td></tr>
+          <tr><td><code>reporting</code></td><td>Interval + OTel export</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">KairosConsole</div>
+        <p>Multi-cluster governance dashboard.</p>
+        <table>
+          <tr><td><code>replicas</code></td><td>Pod count</td></tr>
+          <tr><td><code>image</code></td><td>Container image override</td></tr>
+          <tr><td><code>route</code></td><td>OpenShift Route config</td></tr>
+          <tr><td><code>auth</code></td><td>Authentication type</td></tr>
+          <tr><td><code>clusters[]</code></td><td>Managed cluster refs</td></tr>
+        </table>
+      </div>
     </div>
+  </div>
+</div>
 
-    <footer>
-        <p>Kairos Operator &copy; 2026 — <a href="https://github.com/maximilianoPizarro">maximilianoPizarro</a></p>
-        <p style="margin-top: 0.5rem; font-style: italic; color: var(--accent-purple);">
-            καιρός — "the right, critical, or opportune moment"
-        </p>
-        <p style="margin-top: 0.5rem;">Apache License 2.0</p>
-    </footer>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="Enlarged view">
+</div>
+
+<footer>
+  <p><strong>Kairos Operator</strong> — Apache License 2.0</p>
+  <p><a href="https://github.com/maximilianoPizarro/kairos">GitHub</a> · <a href="https://quay.io/organization/maximilianopizarro">Container Images</a></p>
+</footer>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function openLightbox(container) {
+  const img = container.querySelector('img');
+  document.getElementById('lightbox-img').src = img.src;
+  document.getElementById('lightbox').classList.add('active');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
 </body>
 </html>

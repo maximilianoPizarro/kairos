@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="neon1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#7c4dff"/>
+    </linearGradient>
+    <linearGradient id="neon2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff6d00"/>
+      <stop offset="100%" stop-color="#ffab40"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-sm">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="500" fill="url(#bg)"/>
+  <rect width="900" height="500" fill="none" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Grid lines -->
+  <g stroke="#21262d" stroke-width="0.5" opacity="0.5">
+    <line x1="0" y1="100" x2="900" y2="100"/>
+    <line x1="0" y1="200" x2="900" y2="200"/>
+    <line x1="0" y1="300" x2="900" y2="300"/>
+    <line x1="0" y1="400" x2="900" y2="400"/>
+    <line x1="150" y1="0" x2="150" y2="500"/>
+    <line x1="300" y1="0" x2="300" y2="500"/>
+    <line x1="450" y1="0" x2="450" y2="500"/>
+    <line x1="600" y1="0" x2="600" y2="500"/>
+    <line x1="750" y1="0" x2="750" y2="500"/>
+  </g>
+
+  <!-- Title -->
+  <text x="450" y="40" font-family="monospace" font-size="18" fill="#00e5ff" text-anchor="middle" filter="url(#glow-sm)">KAIROS MULTI-CLUSTER OBSERVABILITY</text>
+
+  <!-- Hub cluster (center) -->
+  <g transform="translate(400, 200)">
+    <rect x="-80" y="-60" width="160" height="120" rx="8" fill="#1a1a2e" stroke="#00e5ff" stroke-width="2" filter="url(#glow)"/>
+    <text x="0" y="-38" font-family="monospace" font-size="13" fill="#00e5ff" text-anchor="middle" font-weight="bold">HUB CLUSTER</text>
+    <text x="0" y="-18" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+    <text x="0" y="0" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-console</text>
+    <text x="0" y="18" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">thanos-querier</text>
+    <text x="0" y="36" font-family="monospace" font-size="9" fill="#7c4dff" text-anchor="middle">otel-collector</text>
+    <circle cx="60" cy="-42" r="5" fill="#00e676"/>
+    <text x="0" y="55" font-family="monospace" font-size="8" fill="#4caf50" text-anchor="middle">œ supervised agent</text>
+  </g>
+
+  <!-- East cluster -->
+  <g transform="translate(150, 350)">
+    <rect x="-70" y="-50" width="140" height="100" rx="8" fill="#1a1a2e" stroke="#7c4dff" stroke-width="1.5" filter="url(#glow-sm)"/>
+    <text x="0" y="-28" font-family="monospace" font-size="12" fill="#7c4dff" text-anchor="middle" font-weight="bold">EAST</text>
+    <text x="0" y="-10" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+    <text x="0" y="8" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">prometheus</text>
+    <circle cx="50" cy="-32" r="5" fill="#00e676"/>
+    <text x="0" y="30" font-family="monospace" font-size="8" fill="#ff6d00" text-anchor="middle">œ autopilot agent</text>
+    <text x="0" y="42" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">us-east-2</text>
+  </g>
+
+  <!-- West cluster -->
+  <g transform="translate(700, 350)">
+    <rect x="-70" y="-50" width="140" height="100" rx="8" fill="#1a1a2e" stroke="#7c4dff" stroke-width="1.5" filter="url(#glow-sm)"/>
+    <text x="0" y="-28" font-family="monospace" font-size="12" fill="#7c4dff" text-anchor="middle" font-weight="bold">WEST</text>
+    <text x="0" y="-10" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">kairos-operator</text>
+    <text x="0" y="8" font-family="monospace" font-size="9" fill="#ffab40" text-anchor="middle">prometheus</text>
+    <circle cx="50" cy="-32" r="5" fill="#00e676"/>
+    <text x="0" y="30" font-family="monospace" font-size="8" fill="#ff6d00" text-anchor="middle">œ autopilot agent</text>
+    <text x="0" y="42" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">us-west-1</text>
+  </g>
+
+  <!-- AI Model (top right) -->
+  <g transform="translate(750, 130)">
+    <rect x="-65" y="-35" width="130" height="70" rx="8" fill="#1a1a2e" stroke="#ff6d00" stroke-width="1.5"/>
+    <text x="0" y="-12" font-family="monospace" font-size="10" fill="#ff6d00" text-anchor="middle" font-weight="bold">AI MODEL</text>
+    <text x="0" y="5" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">deepseek-r1-distill</text>
+    <text x="0" y="18" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">qwen-14b via LiteLLM</text>
+  </g>
+
+  <!-- OTel Collector (top left) -->
+  <g transform="translate(150, 130)">
+    <rect x="-65" y="-35" width="130" height="70" rx="8" fill="#1a1a2e" stroke="#ffab40" stroke-width="1.5"/>
+    <text x="0" y="-12" font-family="monospace" font-size="10" fill="#ffab40" text-anchor="middle" font-weight="bold">OPENTELEMETRY</text>
+    <text x="0" y="5" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">gRPC:4317 (OTLP)</text>
+    <text x="0" y="18" font-family="monospace" font-size="8" fill="#8b949e" text-anchor="middle">receivers: otlp, prom</text>
+  </g>
+
+  <!-- Connection lines -->
+  <!-- OTel to Hub -->
+  <line x1="215" y1="145" x2="320" y2="185" stroke="#ffab40" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7" filter="url(#glow-sm)"/>
+  <!-- AI to Hub -->
+  <line x1="685" y1="145" x2="480" y2="185" stroke="#ff6d00" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7" filter="url(#glow-sm)"/>
+  <!-- Hub to East -->
+  <line x1="350" y1="260" x2="190" y2="300" stroke="url(#neon1)" stroke-width="1.8" opacity="0.8" filter="url(#glow-sm)"/>
+  <!-- Hub to West -->
+  <line x1="470" y1="260" x2="660" y2="300" stroke="url(#neon1)" stroke-width="1.8" opacity="0.8" filter="url(#glow-sm)"/>
+
+  <!-- Data flow arrows -->
+  <text x="270" y="275" font-family="monospace" font-size="8" fill="#00e5ff" opacity="0.8">metrics ≤</text>
+  <text x="560" y="275" font-family="monospace" font-size="8" fill="#00e5ff" opacity="0.8">metrics ≤</text>
+  <text x="260" y="165" font-family="monospace" font-size="8" fill="#ffab40" opacity="0.8">OTLP í</text>
+  <text x="570" y="165" font-family="monospace" font-size="8" fill="#ff6d00" opacity="0.8">ê AI API</text>
+
+  <!-- Thanos badge on Hub -->
+  <g transform="translate(450, 240)">
+    <rect x="-35" y="-10" width="70" height="20" rx="4" fill="#ffab40" opacity="0.2" stroke="#ffab40" stroke-width="0.5"/>
+    <text x="0" y="4" font-family="monospace" font-size="8" fill="#ffab40" text-anchor="middle">THANOS</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(30, 460)">
+    <circle cx="5" cy="0" r="3" fill="#00e676"/>
+    <text x="15" y="3" font-family="monospace" font-size="9" fill="#8b949e">healthy</text>
+    <circle cx="75" cy="0" r="3" fill="#ff6d00"/>
+    <text x="85" y="3" font-family="monospace" font-size="9" fill="#8b949e">autopilot</text>
+    <circle cx="155" cy="0" r="3" fill="#00e5ff"/>
+    <text x="165" y="3" font-family="monospace" font-size="9" fill="#8b949e">supervised</text>
+    <line x1="245" y1="0" x2="265" y2="0" stroke="#ffab40" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="275" y="3" font-family="monospace" font-size="9" fill="#8b949e">OTel/AI</text>
+    <line x1="325" y1="0" x2="345" y2="0" stroke="#00e5ff" stroke-width="1.5"/>
+    <text x="355" y="3" font-family="monospace" font-size="9" fill="#8b949e">metrics flow</text>
+  </g>
+
+  <!-- Version tag -->
+  <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v0.1.0</text>
+</svg>

@@ -8,8 +8,13 @@
   > *"Kairos is the fleeting moment of opportunity — the instant when conditions align perfectly for action. In infrastructure, it's the precise moment to scale before latency spikes, and to release resources before waste accumulates."*
 
   [![CI](https://github.com/maximilianoPizarro/kairos/actions/workflows/ci.yaml/badge.svg)](https://github.com/maximilianoPizarro/kairos/actions/workflows/ci.yaml)
+  [![E2E Tests](https://github.com/maximilianoPizarro/kairos/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/maximilianoPizarro/kairos/actions/workflows/test-e2e.yml)
+  [![GitHub Pages](https://github.com/maximilianoPizarro/kairos/actions/workflows/pages.yaml/badge.svg)](https://github.com/maximilianoPizarro/kairos/actions/workflows/pages.yaml)
   [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-  [![Operator SDK](https://img.shields.io/badge/Operator%20SDK-v1.40.0-red.svg)](https://sdk.operatorframework.io/)
+  [![OpenShift](https://img.shields.io/badge/OpenShift-4.14+-red.svg)](https://www.redhat.com/en/technologies/cloud-computing/openshift)
+  [![Operator SDK](https://img.shields.io/badge/Operator%20SDK-v1.40.0-blueviolet.svg)](https://sdk.operatorframework.io/)
+  [![Go](https://img.shields.io/badge/Go-1.23-00ADD8.svg)](https://go.dev/)
+  [![Documentation](https://img.shields.io/badge/Docs-GitHub%20Pages-brightgreen.svg)](https://maximilianoPizarro.github.io/kairos)
 </div>
 
 ---
@@ -183,26 +188,25 @@ Available suffix patterns: `-dev`, `-test`, `-qa`, `-prod` (or any custom suffix
 ### Install
 
 ```bash
-# 1. Install CRDs
-oc apply -f config/crd/bases/
+# Clone the repository
+git clone https://github.com/maximilianoPizarro/kairos.git
+cd kairos
 
-# 2. Create namespace, ServiceAccount, and RBAC
-oc apply -f config/samples/prereqs.yaml
+# Install CRDs into the cluster
+make install
 
-# 3. Deploy the operator
+# Deploy the operator (uses kustomize)
 make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
 
-# 4. Create a scaling policy with Thanos metrics
-oc apply -f config/samples/kairos_v1alpha1_smartscalingpolicy.yaml
-
-# 5. (Optional) Deploy AI agent
-oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
-
-# 6. Deploy the governance console
-oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml
+# Verify the operator is running
+oc get pods -n kairos-system
+# NAME                                        READY   STATUS    RESTARTS   AGE
+# kairos-operator-controller-manager-xxx      1/1     Running   0          30s
 ```
 
 ### Mark a workload for Kairos management
+
+Add the annotation `kairos.io/managed: "true"` to any Deployment or StatefulSet. Leave `resources: {}` empty so Kairos manages it via Server-Side Apply:
 
 ```yaml
 apiVersion: apps/v1
@@ -221,20 +225,86 @@ spec:
         resources: {}   # Leave EMPTY - Kairos manages this via SSA
 ```
 
+### Create a SmartScalingPolicy
+
+```bash
+# Apply the sample scaling policy
+oc apply -f config/samples/kairos_v1alpha1_smartscalingpolicy.yaml
+
+# Check status
+oc get smartscalingpolicies -n kairos-system
+# NAME             TARGET          ACTIVE RULES   LAST EVALUATION
+# my-policy        my-app          2              2026-05-27T19:23:29Z
+```
+
+### Deploy the AI Agent (optional)
+
+```bash
+# Create the AI credentials secret
+oc create secret generic kairos-ai-credentials \
+  -n kairos-system \
+  --from-literal=api-key=<your-api-key>
+
+# Deploy the agent
+oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
+
+# Check agent status
+oc get kairosagents -n kairos-system
+# NAME         MODE        AI MODEL                        PHASE    WATCHED
+# hub-agent    supervised  deepseek-r1-distill-qwen-14b    Active   8
+```
+
+### Deploy the Governance Console
+
+```bash
+# Deploy the console
+oc apply -f config/samples/kairos_v1alpha1_kairosconsole.yaml
+
+# Get the route URL
+oc get route kairos-console -n kairos-system -o jsonpath='{.spec.host}'
+# kairos-console.apps.your-cluster.example.com
+```
+
 ## ArgoCD Coexistence
 
 See [docs/argocd-coexistence.md](docs/argocd-coexistence.md) for the complete guide.
 
-**TL;DR:** Leave `resources: {}` empty in your Git manifests, add `kairos.io/managed: "true"` annotation, and configure `ignoreDifferences` in ArgoCD.
+**TL;DR:** Leave `resources: {}` empty in your Git manifests, add `kairos.io/managed: "true"` annotation, and configure `ignoreDifferences` in your ArgoCD Application:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+spec:
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jqPathExpressions:
+    - .spec.template.spec.containers[].resources
+```
 
 ## Container Images
 
-| Image | Purpose | Base |
-|---|---|---|
-| `quay.io/maximilianopizarro/kairos-operator` | Controller manager | UBI9 Micro |
-| `quay.io/maximilianopizarro/kairos-console` | Governance dashboard | UBI9 Micro |
-| `quay.io/maximilianopizarro/kairos-operator-bundle` | OLM bundle | UBI9 Micro |
-| `quay.io/maximilianopizarro/kairos-operator-catalog` | OLM catalog | OPM |
+All images are built on Red Hat Universal Base Images (UBI9) for security and compliance.
+
+| Image | Purpose | Base | Registry |
+|---|---|---|---|
+| `kairos-operator` | Controller manager | UBI9 Micro | [Quay.io](https://quay.io/repository/maximilianopizarro/kairos-operator) / [GHCR](https://github.com/maximilianoPizarro/kairos/pkgs/container/kairos-operator) |
+| `kairos-console` | Governance dashboard | UBI9 Micro | [Quay.io](https://quay.io/repository/maximilianopizarro/kairos-console) / [GHCR](https://github.com/maximilianoPizarro/kairos/pkgs/container/kairos-console) |
+| `kairos-operator-bundle` | OLM bundle | UBI9 Micro | [Quay.io](https://quay.io/repository/maximilianopizarro/kairos-operator-bundle) |
+| `kairos-operator-catalog` | OLM catalog | OPM | [Quay.io](https://quay.io/repository/maximilianopizarro/kairos-operator-catalog) |
+
+Pull images:
+```bash
+# From Quay.io
+podman pull quay.io/maximilianopizarro/kairos-operator:v0.1.0
+podman pull quay.io/maximilianopizarro/kairos-console:v0.1.3
+
+# From GitHub Container Registry
+podman pull ghcr.io/maximilianopizarro/kairos-operator:v0.1.0
+podman pull ghcr.io/maximilianopizarro/kairos-console:v0.1.3
+```
 
 ## CRDs
 
@@ -249,33 +319,87 @@ See [docs/argocd-coexistence.md](docs/argocd-coexistence.md) for the complete gu
 ### Build locally
 
 ```bash
-# Operator
-make docker-build IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
-make docker-push IMG=quay.io/maximilianopizarro/kairos-operator:v0.1.0
+# Build the operator image
+make docker-build IMG=quay.io/maximilianopizarro/kairos-operator:dev
 
-# Console
-make docker-build-console
-make docker-push-console
+# Build the console image (from project root)
+podman build -f console/Dockerfile -t quay.io/maximilianopizarro/kairos-console:dev .
 
-# Everything
-make release
+# Push images
+make docker-push IMG=quay.io/maximilianopizarro/kairos-operator:dev
+podman push quay.io/maximilianopizarro/kairos-console:dev
 ```
 
 ### Run tests
 
 ```bash
+# Unit tests with envtest
 make test
+
+# Run specific controller test
+go test ./internal/controller/... -v -run TestSmartScalingPolicy
+
+# E2E tests (requires Kind cluster)
+make test-e2e
 ```
 
 ### Generate manifests after type changes
 
 ```bash
-make generate manifests
+# After modifying api/v1alpha1/*_types.go, regenerate:
+make generate    # Updates DeepCopy methods
+make manifests   # Updates CRD YAML in config/crd/bases/
+
+# Verify everything is in sync
+git diff --exit-code
+```
+
+### Install CRDs for local development
+
+```bash
+# Install CRDs into the current cluster context
+make install
+
+# Run the operator locally (without container)
+make run
+
+# Uninstall CRDs
+make uninstall
+```
+
+### Lint
+
+```bash
+# Run golangci-lint
+golangci-lint run
+
+# Format code
+gofmt -w .
 ```
 
 ## Documentation
 
-Full documentation: https://maximilianoPizarro.github.io/kairos
+Full documentation available at: **https://maximilianoPizarro.github.io/kairos**
+
+The documentation covers:
+- Multi-cluster configuration (hub-spoke topology)
+- Observability setup (OpenTelemetry + Thanos)
+- AI model integration
+- ArgoCD coexistence patterns
+- CRD reference
+- Installation guide
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'Add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
+
+Ensure all tests pass (`make test`) and lints are clean before submitting.
 
 ## License
 

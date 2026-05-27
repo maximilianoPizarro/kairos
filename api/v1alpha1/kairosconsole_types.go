@@ -39,11 +39,33 @@ type RouteConfig struct {
 	TLSEnabled bool `json:"tlsEnabled,omitempty"`
 }
 
+// OAuthConfig defines OpenShift OAuth proxy settings.
+type OAuthConfig struct {
+	// The OpenShift OAuth proxy image to use
+	// +kubebuilder:default="registry.redhat.io/openshift4/ose-oauth-proxy:latest"
+	// +optional
+	Image string `json:"image,omitempty"`
+	// Cookie secret name for OAuth session encryption
+	// +optional
+	CookieSecret string `json:"cookieSecret,omitempty"`
+	// ClusterRole required to access the console (default: cluster-admin)
+	// +kubebuilder:default="cluster-admin"
+	// +optional
+	RequiredRole string `json:"requiredRole,omitempty"`
+	// Custom HTTPS port for the OAuth proxy (default: 8443)
+	// +kubebuilder:default=8443
+	// +optional
+	HTTPSPort int32 `json:"httpsPort,omitempty"`
+}
+
 // ConsoleAuthConfig defines authentication for the console.
 type ConsoleAuthConfig struct {
 	Type AuthType `json:"type"`
 	// +optional
 	TokenSecret *SecretKeyRef `json:"tokenSecret,omitempty"`
+	// OpenShift OAuth proxy configuration (only used when type=openshift-oauth)
+	// +optional
+	OAuth *OAuthConfig `json:"oauth,omitempty"`
 }
 
 // KairosConsoleSpec defines the desired state of KairosConsole.

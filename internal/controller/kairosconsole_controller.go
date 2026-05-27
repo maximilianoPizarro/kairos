@@ -53,7 +53,9 @@ type KairosConsoleReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 
 func (r *KairosConsoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
@@ -146,6 +148,18 @@ func (r *KairosConsoleReconciler) reconcileServiceAccount(ctx context.Context, c
 		},
 	}
 
+	// Add OAuth redirect annotation when using openshift-oauth
+	if r.isOAuthEnabled(console) {
+		redirectURI := fmt.Sprintf("https://%s/oauth/callback", console.Spec.Route.Host)
+		sa.Annotations = map[string]string{
+			"serviceaccounts.openshift.io/oauth-redirectreference.kairos": fmt.Sprintf(
+				`{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`,
+				consoleName(console),
+			),
+			"serviceaccounts.openshift.io/oauth-redirecturi.kairos": redirectURI,
+		}
+	}
+
 	if err := controllerutil.SetControllerReference(console, sa, r.Scheme); err != nil {
 		return err
 	}
@@ -157,7 +171,17 @@ func (r *KairosConsoleReconciler) reconcileServiceAccount(ctx context.Context, c
 		}
 		return err
 	}
+
+	// Update annotations if changed
+	if r.isOAuthEnabled(console) {
+		existing.Annotations = sa.Annotations
+		return r.Update(ctx, existing)
+	}
 	return nil
+}
+
+func (r *KairosConsoleReconciler) isOAuthEnabled(console *kairosv1alpha1.KairosConsole) bool {
+	return console.Spec.Auth != nil && console.Spec.Auth.Type == kairosv1alpha1.AuthTypeOpenshiftOAuth
 }
 
 func (r *KairosConsoleReconciler) reconcileDeployment(ctx context.Context, console *kairosv1alpha1.KairosConsole, image string, replicas int32) error {
@@ -165,6 +189,148 @@ func (r *KairosConsoleReconciler) reconcileDeployment(ctx context.Context, conso
 		"app":                         consoleName(console),
 		kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
 		kairosv1alpha1.LabelComponent: "console",
+	}
+
+	containers := []corev1.Container{
+		{
+			Name:  "console",
+			Image: image,
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "http",
+					ContainerPort: 8080,
+					Protocol:      corev1.ProtocolTCP,
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("512Mi"),
+				},
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: "/healthz",
+						Port: intstr.FromInt(8080),
+					},
+				},
+				InitialDelaySeconds: 10,
+				PeriodSeconds:       30,
+			},
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: "/readyz",
+						Port: intstr.FromInt(8080),
+					},
+				},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       10,
+			},
+		},
+	}
+
+	var volumes []corev1.Volume
+
+	// Add oauth-proxy sidecar when auth type is openshift-oauth
+	if r.isOAuthEnabled(console) {
+		oauthImage := "registry.redhat.io/openshift4/ose-oauth-proxy:latest"
+		requiredRole := "cluster-admin"
+		httpsPort := int32(8443)
+		cookieSecretName := fmt.Sprintf("%s-oauth-cookie", consoleName(console))
+
+		if console.Spec.Auth.OAuth != nil {
+			if console.Spec.Auth.OAuth.Image != "" {
+				oauthImage = console.Spec.Auth.OAuth.Image
+			}
+			if console.Spec.Auth.OAuth.RequiredRole != "" {
+				requiredRole = console.Spec.Auth.OAuth.RequiredRole
+			}
+			if console.Spec.Auth.OAuth.HTTPSPort > 0 {
+				httpsPort = console.Spec.Auth.OAuth.HTTPSPort
+			}
+			if console.Spec.Auth.OAuth.CookieSecret != "" {
+				cookieSecretName = console.Spec.Auth.OAuth.CookieSecret
+			}
+		}
+
+		// Ensure cookie secret exists
+		if err := r.ensureOAuthCookieSecret(ctx, console, cookieSecretName); err != nil {
+			return err
+		}
+
+		oauthProxy := corev1.Container{
+			Name:  "oauth-proxy",
+			Image: oauthImage,
+			Args: []string{
+				"--https-address=:" + fmt.Sprintf("%d", httpsPort),
+				"--http-address=",
+				"--provider=openshift",
+				"--upstream=http://localhost:8080",
+				"--tls-cert=/etc/tls/private/tls.crt",
+				"--tls-key=/etc/tls/private/tls.key",
+				"--cookie-secret-file=/etc/oauth/cookie-secret",
+				"--openshift-service-account=" + consoleName(console),
+				"--openshift-sar={\"resource\":\"namespaces\",\"verb\":\"get\"}",
+				"--openshift-delegate-urls={\"/\":{\"resource\":\"namespaces\",\"verb\":\"get\",\"group\":\"\",\"subresource\":\"\"}}",
+				fmt.Sprintf("--openshift-sar={\"resource\":\"clusterroles\",\"verb\":\"bind\",\"resourceName\":\"%s\"}", requiredRole),
+			},
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "https",
+					ContainerPort: httpsPort,
+					Protocol:      corev1.ProtocolTCP,
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("64Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "tls-certs",
+					MountPath: "/etc/tls/private",
+					ReadOnly:  true,
+				},
+				{
+					Name:      "oauth-cookie",
+					MountPath: "/etc/oauth",
+					ReadOnly:  true,
+				},
+			},
+		}
+		containers = append(containers, oauthProxy)
+
+		tlsSecretName := fmt.Sprintf("%s-tls", consoleName(console))
+		volumes = []corev1.Volume{
+			{
+				Name: "tls-certs",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: tlsSecretName,
+					},
+				},
+			},
+			{
+				Name: "oauth-cookie",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: cookieSecretName,
+					},
+				},
+			},
+		}
 	}
 
 	deploy := &appsv1.Deployment{
@@ -184,49 +350,8 @@ func (r *KairosConsoleReconciler) reconcileDeployment(ctx context.Context, conso
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: consoleName(console),
-					Containers: []corev1.Container{
-						{
-							Name:  "console",
-							Image: image,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: 8080,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("512Mi"),
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.FromInt(8080),
-									},
-								},
-								InitialDelaySeconds: 10,
-								PeriodSeconds:       30,
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/readyz",
-										Port: intstr.FromInt(8080),
-									},
-								},
-								InitialDelaySeconds: 5,
-								PeriodSeconds:       10,
-							},
-						},
-					},
+					Containers:         containers,
+					Volumes:            volumes,
 				},
 			},
 		},
@@ -271,6 +396,24 @@ func (r *KairosConsoleReconciler) reconcileService(ctx context.Context, console 
 		},
 	}
 
+	// When OAuth is enabled, add the HTTPS port and annotate for serving-cert
+	if r.isOAuthEnabled(console) {
+		httpsPort := int32(8443)
+		if console.Spec.Auth.OAuth != nil && console.Spec.Auth.OAuth.HTTPSPort > 0 {
+			httpsPort = console.Spec.Auth.OAuth.HTTPSPort
+		}
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{
+			Name:       "https",
+			Port:       httpsPort,
+			TargetPort: intstr.FromInt32(httpsPort),
+			Protocol:   corev1.ProtocolTCP,
+		})
+		// Annotation for OpenShift to auto-generate TLS certificate
+		svc.Annotations = map[string]string{
+			"service.beta.openshift.io/serving-cert-secret-name": fmt.Sprintf("%s-tls", consoleName(console)),
+		}
+	}
+
 	if err := controllerutil.SetControllerReference(console, svc, r.Scheme); err != nil {
 		return err
 	}
@@ -285,7 +428,45 @@ func (r *KairosConsoleReconciler) reconcileService(ctx context.Context, console 
 
 	existing.Spec.Selector = svc.Spec.Selector
 	existing.Spec.Ports = svc.Spec.Ports
+	if svc.Annotations != nil {
+		if existing.Annotations == nil {
+			existing.Annotations = make(map[string]string)
+		}
+		for k, v := range svc.Annotations {
+			existing.Annotations[k] = v
+		}
+	}
 	return r.Update(ctx, existing)
+}
+
+func (r *KairosConsoleReconciler) ensureOAuthCookieSecret(ctx context.Context, console *kairosv1alpha1.KairosConsole, secretName string) error {
+	secret := &corev1.Secret{}
+	if err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: console.Namespace}, secret); err != nil {
+		if errors.IsNotFound(err) {
+			// Generate a random cookie secret (32 bytes base64 encoded)
+			cookieValue := "kairos-oauth-session-secret-key!" // 32 bytes
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: console.Namespace,
+					Labels: map[string]string{
+						kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
+						kairosv1alpha1.LabelComponent: "console",
+					},
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					"cookie-secret": []byte(cookieValue),
+				},
+			}
+			if err := controllerutil.SetControllerReference(console, secret, r.Scheme); err != nil {
+				return err
+			}
+			return r.Create(ctx, secret)
+		}
+		return err
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

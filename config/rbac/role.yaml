@@ -16,7 +16,6 @@ rules:
   resources:
   - namespaces
   - pods
-  - secrets
   verbs:
   - get
   - list
@@ -24,6 +23,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - secrets
   - serviceaccounts
   - services
   verbs:
@@ -88,6 +88,18 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - route.openshift.io
   resources:

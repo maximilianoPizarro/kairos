@@ -52,6 +52,29 @@ spec:
               auth:
                 description: Authentication configuration
                 properties:
+                  oauth:
+                    description: OpenShift OAuth proxy configuration (only used when
+                      type=openshift-oauth)
+                    properties:
+                      cookieSecret:
+                        description: Cookie secret name for OAuth session encryption
+                        type: string
+                      httpsPort:
+                        default: 8443
+                        description: 'Custom HTTPS port for the OAuth proxy (default:
+                          8443)'
+                        format: int32
+                        type: integer
+                      image:
+                        default: registry.redhat.io/openshift4/ose-oauth-proxy:latest
+                        description: The OpenShift OAuth proxy image to use
+                        type: string
+                      requiredRole:
+                        default: cluster-admin
+                        description: 'ClusterRole required to access the console (default:
+                          cluster-admin)'
+                        type: string
+                    type: object
                   tokenSecret:
                     description: SecretKeyRef references a key in a Secret.
                     properties:

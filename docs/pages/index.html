@@ -230,6 +230,7 @@
     <a class="nav-tab" onclick="showSection('observability')">Observability</a>
     <a class="nav-tab" onclick="showSection('ai')">AI Configuration</a>
     <a class="nav-tab" onclick="showSection('argocd')">ArgoCD</a>
+    <a class="nav-tab" onclick="showSection('auth')">Authentication</a>
     <a class="nav-tab" onclick="showSection('install')">Installation</a>
     <a class="nav-tab" onclick="showSection('crds')">CRDs</a>
   </div>
@@ -1107,6 +1108,125 @@ spec:
       <tr><td><strong>Git</strong></td><td>Contains <code>resources: {}</code> — this IS the desired state ("let Kairos manage it")</td></tr>
       <tr><td><strong>Result</strong></td><td>Always "Synced" in ArgoCD. No drift alerts. Both controllers coexist.</td></tr>
     </table>
+  </div>
+
+  <!-- AUTHENTICATION -->
+  <div id="auth" class="section">
+    <h2>Console Authentication</h2>
+
+    <div class="alert alert-info">
+      By default, the console runs <strong>without authentication</strong> for easy initial setup. 
+      For production, enable OpenShift OAuth — the same pattern used by Kiali and Grafana.
+    </div>
+
+    <h3>Authentication Modes</h3>
+    <table>
+      <thead><tr><th>Mode</th><th><code>spec.auth.type</code></th><th>Description</th><th>When to Use</th></tr></thead>
+      <tbody>
+        <tr><td><span class="label label-green">None</span></td><td><code>none</code></td><td>No authentication — open access</td><td>Development, initial setup, internal networks</td></tr>
+        <tr><td><span class="label label-orange">OpenShift OAuth</span></td><td><code>openshift-oauth</code></td><td>OpenShift built-in OAuth server + proxy sidecar</td><td>Production on OpenShift (recommended)</td></tr>
+        <tr><td><span class="label label-purple">Token</span></td><td><code>token</code></td><td>Static bearer token</td><td>Air-gapped environments</td></tr>
+      </tbody>
+    </table>
+
+    <h3>OpenShift OAuth (Recommended for Production)</h3>
+    <p>Uses the <code>ose-oauth-proxy</code> sidecar — the same mechanism Kiali, Grafana, and other OpenShift-integrated UIs use. 
+    Users authenticate via the OpenShift login page and must have <code>cluster-admin</code> (or configured role) to access.</p>
+
+    <div class="card">
+      <div class="card-title">How It Works</div>
+      <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    Kairos Console Pod                         │
+│                                                              │
+│  ┌───────────────┐         ┌──────────────────────┐        │
+│  │ oauth-proxy   │ ──────▶ │  console (Go+React)  │        │
+│  │ :8443 (HTTPS) │ proxy   │  :8080 (HTTP)        │        │
+│  └───────┬───────┘         └──────────────────────┘        │
+│          │                                                   │
+└──────────┼───────────────────────────────────────────────────┘
+           │
+           ▼
+   OpenShift OAuth Server (built-in)
+           │
+           ▼
+   User logs in with OpenShift credentials
+   (cluster-admin role verified)</code></pre>
+    </div>
+
+    <h4>Enable OAuth</h4>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosConsole
+metadata:
+  name: kairos
+  namespace: kairos-system
+spec:
+  replicas: 1
+  image: "quay.io/maximilianopizarro/kairos-console:latest"
+  route:
+    enabled: true
+    host: "kairos-console.apps.your-cluster.example.com"
+    tlsEnabled: true
+  auth:
+    type: openshift-oauth
+    oauth:
+      requiredRole: "cluster-admin"     # Only cluster-admins can access
+      httpsPort: 8443</code></pre>
+
+    <h4>What the Operator Creates Automatically</h4>
+    <div class="card">
+      <table>
+        <tr><td><strong>1. ServiceAccount annotation</strong></td><td>Registers the SA as an OAuth client with OpenShift</td></tr>
+        <tr><td><strong>2. Service annotation</strong></td><td><code>service.beta.openshift.io/serving-cert-secret-name</code> → auto-generates TLS cert</td></tr>
+        <tr><td><strong>3. Cookie secret</strong></td><td>Session encryption for the OAuth proxy</td></tr>
+        <tr><td><strong>4. oauth-proxy sidecar</strong></td><td>Terminates TLS, authenticates via OAuth, checks role, proxies to console</td></tr>
+      </table>
+    </div>
+
+    <h4>Enable OAuth on an Existing Console (no auth → OAuth)</h4>
+    <pre><code># Patch the existing KairosConsole CR
+oc patch kairosconsole kairos -n kairos-system --type='merge' -p '{
+  "spec": {
+    "auth": {
+      "type": "openshift-oauth",
+      "oauth": {
+        "requiredRole": "cluster-admin"
+      }
+    }
+  }
+}'
+
+# The operator automatically handles all OAuth setup.
+# Next access to the console URL will redirect to OpenShift login.</code></pre>
+
+    <h4>Customizing the Required Role</h4>
+    <table>
+      <thead><tr><th>Role</th><th>Who Has It</th><th>Access Level</th></tr></thead>
+      <tbody>
+        <tr><td><code>cluster-admin</code></td><td>Cluster administrators</td><td>Full access (default, most restrictive)</td></tr>
+        <tr><td><code>admin</code></td><td>Namespace administrators</td><td>Project-level admin</td></tr>
+        <tr><td><code>cluster-monitoring-view</code></td><td>Monitoring users</td><td>Read-only monitoring</td></tr>
+        <tr><td><code>view</code></td><td>Any authenticated user</td><td>Read-only (least restrictive)</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Disable OAuth (Revert to Open Access)</h4>
+    <pre><code>oc patch kairosconsole kairos -n kairos-system --type='merge' -p '{
+  "spec": { "auth": { "type": "none" } }
+}'</code></pre>
+
+    <h3>Troubleshooting</h3>
+    <pre><code># Check oauth-proxy sidecar logs
+oc logs deployment/kairos-console -n kairos-system -c oauth-proxy
+
+# Verify ServiceAccount has OAuth annotations
+oc get sa kairos-console -n kairos-system -o yaml | grep oauth
+
+# Check TLS secret was auto-generated by OpenShift service-ca
+oc get secret kairos-console-tls -n kairos-system
+
+# Test the Route (should redirect to OpenShift login)
+curl -Ik https://kairos-console.apps.your-cluster.example.com
+# Expected: HTTP/1.1 302 → Location: .../oauth/authorize</code></pre>
   </div>
 
   <!-- INSTALL -->

@@ -1,26 +1,50 @@
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosConsole
 metadata:
-  name: kairos-console
+  name: kairos
   namespace: kairos-system
   labels:
     app.kubernetes.io/managed-by: kairos-operator
 spec:
   replicas: 1
-  image: "quay.io/maximilianopizarro/kairos-console:v0.1.0"
+  image: "quay.io/maximilianopizarro/kairos-console:latest"
   route:
     enabled: true
-    host: "kairos-console-kairos-system.apps.cluster-example.openshiftapps.com"
+    host: "kairos-console.apps.your-cluster.example.com"
     tlsEnabled: true
+  # Default: no authentication (first setup / development)
   auth:
-    type: openshift-oauth
+    type: none
   clusters:
   - name: hub
     region: central
-    apiURL: "https://api.cluster-hub.openshiftapps.com:6443"
-  - name: east
-    region: east
-    apiURL: "https://api.cluster-east.openshiftapps.com:6443"
-  - name: west
-    region: west
-    apiURL: "https://api.cluster-west.openshiftapps.com:6443"
+    apiURL: "https://api.hub-cluster:6443"
+---
+# Alternatively, with OpenShift OAuth (production):
+# apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+# kind: KairosConsole
+# metadata:
+#   name: kairos
+#   namespace: kairos-system
+# spec:
+#   replicas: 1
+#   image: "quay.io/maximilianopizarro/kairos-console:latest"
+#   route:
+#     enabled: true
+#     host: "kairos-console.apps.your-cluster.example.com"
+#     tlsEnabled: true
+#   auth:
+#     type: openshift-oauth
+#     oauth:
+#       requiredRole: "cluster-admin"     # Only cluster-admins can access
+#       httpsPort: 8443
+#   clusters:
+#   - name: hub
+#     region: central
+#     apiURL: "https://api.hub-cluster:6443"
+#   - name: east
+#     region: us-east-2
+#     apiURL: "https://api.east-cluster:6443"
+#   - name: west
+#     region: us-west-1
+#     apiURL: "https://api.west-cluster:6443"

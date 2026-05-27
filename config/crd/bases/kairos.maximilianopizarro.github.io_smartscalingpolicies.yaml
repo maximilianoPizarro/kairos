@@ -99,6 +99,44 @@ spec:
                 - provider
                 - region
                 type: object
+              metricsAdapters:
+                description: Custom metrics adapters (Datadog, New Relic, Splunk)
+                items:
+                  description: MetricsAdapter configures an external metrics provider.
+                  properties:
+                    credentialsSecretRef:
+                      description: Secret with API key/credentials
+                      properties:
+                        key:
+                          type: string
+                        name:
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
+                    endpoint:
+                      description: API endpoint for the metrics provider
+                      type: string
+                    metricMappings:
+                      additionalProperties:
+                        type: string
+                      description: Metric name mapping (provider-specific metric name
+                        -> standard name)
+                      type: object
+                    type:
+                      description: 'Adapter type: datadog, newrelic, splunk, custom'
+                      enum:
+                      - datadog
+                      - newrelic
+                      - splunk
+                      - custom
+                      type: string
+                  required:
+                  - endpoint
+                  - type
+                  type: object
+                type: array
               metricsTLS:
                 description: TLS settings for metrics endpoints (Prometheus/Thanos/OTel)
                 properties:
@@ -129,12 +167,56 @@ spec:
                       environments)
                     type: boolean
                 type: object
+              ocmSync:
+                description: 'Open Cluster Management sync: replicate policy across
+                  managed clusters'
+                properties:
+                  clusterSelector:
+                    additionalProperties:
+                      type: string
+                    description: Cluster selector labels
+                    type: object
+                  enabled:
+                    description: Enable OCM policy sync
+                    type: boolean
+                  placementRef:
+                    description: Placement rule name for target clusters
+                    type: string
+                required:
+                - enabled
+                type: object
               otelEndpoint:
                 description: OTel collector endpoint (gRPC)
                 type: string
               paused:
                 description: Pause all scaling actions
                 type: boolean
+              predictiveScaling:
+                description: Predictive scaling configuration (time-series forecasting)
+                properties:
+                  algorithm:
+                    description: 'Algorithm to use: linear, arima, prophet'
+                    enum:
+                    - linear
+                    - arima
+                    - prophet
+                    type: string
+                  confidenceThreshold:
+                    description: Confidence threshold (0.0-1.0) for applying predictions
+                    type: string
+                  enabled:
+                    description: Enable predictive scaling
+                    type: boolean
+                  forecastWindow:
+                    description: Forecast horizon (e.g. "1h", "6h", "24h")
+                    type: string
+                  lookbackPeriod:
+                    description: Historical data lookback period (e.g. "7d", "30d")
+                    type: string
+                required:
+                - enabled
+                - forecastWindow
+                type: object
               priority:
                 description: Priority for conflict resolution (higher wins)
                 format: int32

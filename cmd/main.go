@@ -17,20 +17,22 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -223,6 +225,16 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KairosConsole")
 		os.Exit(1)
 	}
+
+	// Auto-create default KairosConsole if none exists in the operator namespace
+	if err := mgr.Add(&defaultConsoleBootstrapper{
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+	}); err != nil {
+		setupLog.Error(err, "unable to add default console bootstrapper")
+		os.Exit(1)
+	}
+
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
@@ -255,4 +267,63 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// defaultConsoleBootstrapper creates a default KairosConsole when none exists.
+type defaultConsoleBootstrapper struct {
+	client client.Client
+	scheme *runtime.Scheme
+}
+
+func (b *defaultConsoleBootstrapper) Start(ctx context.Context) error {
+	log := ctrl.Log.WithName("bootstrapper")
+
+	// Wait a moment for caches to sync
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-time.After(5 * time.Second):
+	}
+
+	ns := os.Getenv("POD_NAMESPACE")
+	if ns == "" {
+		ns = "kairos-system"
+	}
+
+	list := &kairosv1alpha1.KairosConsoleList{}
+	if err := b.client.List(ctx, list, client.InNamespace(ns)); err != nil {
+		log.Error(err, "Failed to list KairosConsole resources")
+		return nil
+	}
+
+	if len(list.Items) > 0 {
+		log.Info("KairosConsole already exists, skipping bootstrap")
+		return nil
+	}
+
+	log.Info("No KairosConsole found, creating default instance", "namespace", ns)
+	replicas := int32(1)
+	console := &kairosv1alpha1.KairosConsole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kairos",
+			Namespace: ns,
+		},
+		Spec: kairosv1alpha1.KairosConsoleSpec{
+			Replicas: &replicas,
+			Route: kairosv1alpha1.RouteConfig{
+				Enabled: true,
+			},
+			Auth: &kairosv1alpha1.ConsoleAuthConfig{
+				Type: kairosv1alpha1.AuthTypeNone,
+			},
+		},
+	}
+
+	if err := b.client.Create(ctx, console); err != nil {
+		log.Error(err, "Failed to create default KairosConsole")
+		return nil
+	}
+
+	log.Info("Default KairosConsole created successfully")
+	return nil
 }

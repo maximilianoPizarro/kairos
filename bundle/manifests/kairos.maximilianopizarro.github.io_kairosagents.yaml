@@ -1,9 +1,9 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  creationTimestamp: null
   name: kairosagents.kairos.maximilianopizarro.github.io
 spec:
   group: kairos.maximilianopizarro.github.io
@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - jsonPath: .spec.correctionPolicy.dryRun
+      name: DryRun
+      type: boolean
     - jsonPath: .status.totalCorrections
       name: Corrections
       type: integer
@@ -79,6 +82,36 @@ spec:
                     description: Request timeout
                     format: int32
                     type: integer
+                  tls:
+                    description: TLS settings for AI API connection
+                    properties:
+                      caSecretRef:
+                        description: Custom CA certificate secret reference
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      certSecretRef:
+                        description: Client certificate secret reference (mTLS)
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      insecureSkipVerify:
+                        description: Skip TLS certificate verification (for disconnected/air-gapped
+                          environments)
+                        type: boolean
+                    type: object
                 required:
                 - apiURL
                 - model
@@ -102,15 +135,163 @@ spec:
                 required:
                 - maxActionsPerHour
                 type: object
+              gitops:
+                description: 'GitOps configuration: generate PRs instead of direct
+                  SSA patches'
+                properties:
+                  branch:
+                    description: 'Branch to create PRs against (default: main)'
+                    type: string
+                  credentialsSecretRef:
+                    description: Secret reference with git credentials (token or SSH
+                      key)
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  path:
+                    description: Path within the repository where manifests reside
+                    type: string
+                  prTitlePrefix:
+                    description: PR title prefix
+                    type: string
+                  repository:
+                    description: Git repository URL (e.g. https://github.com/org/infra-config.git)
+                    type: string
+                required:
+                - repository
+                type: object
+              hubReporting:
+                description: 'Hub reporting: push agent status to the hub console'
+                properties:
+                  clusterName:
+                    description: Cluster name as displayed in the hub console (e.g.
+                      "east", "west", "factory-floor")
+                    type: string
+                  enabled:
+                    description: Enable reporting agent status to hub console
+                    type: boolean
+                  endpoint:
+                    description: Hub console API endpoint (e.g. https://kairos-console.apps.hub-cluster.example.com)
+                    type: string
+                  insecureSkipVerify:
+                    description: Skip TLS verification for hub connection (air-gapped
+                      / self-signed certs)
+                    type: boolean
+                  tls:
+                    description: TLS settings for hub communication
+                    properties:
+                      caSecretRef:
+                        description: Custom CA certificate secret reference
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      certSecretRef:
+                        description: Client certificate secret reference (mTLS)
+                        properties:
+                          key:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - key
+                        - name
+                        type: object
+                      insecureSkipVerify:
+                        description: Skip TLS certificate verification (for disconnected/air-gapped
+                          environments)
+                        type: boolean
+                    type: object
+                  tokenSecretRef:
+                    description: Bearer token secret for authenticating to the hub
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - enabled
+                - endpoint
+                type: object
               mode:
                 description: 'Operating mode: autopilot or supervised'
                 enum:
                 - autopilot
                 - supervised
+                - gitops
                 type: string
+              notifications:
+                description: Notification webhook configuration (Slack/Teams/generic)
+                properties:
+                  channel:
+                    description: Channel override (Slack only)
+                    type: string
+                  events:
+                    description: Events to notify on
+                    items:
+                      type: string
+                    type: array
+                  webhookSecretRef:
+                    description: Secret reference for webhook URL (alternative to
+                      inline)
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  webhookURL:
+                    description: Webhook URL (Slack incoming webhook, Teams connector,
+                      or generic)
+                    type: string
+                required:
+                - webhookURL
+                type: object
               paused:
                 description: Pause the agent
                 type: boolean
+              pinnedResources:
+                description: 'PinnedResources overrides: SRE can pin workload resources
+                  for a duration'
+                items:
+                  description: 'PinnedResource overrides: SRE can pin workload resources
+                    for a duration.'
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    until:
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  - until
+                  type: object
+                type: array
               reporting:
                 description: Reporting configuration
                 properties:
@@ -123,6 +304,9 @@ spec:
                 required:
                 - interval
                 type: object
+              slaClass:
+                description: 'SLA class reference: priority class for SLA-aware scheduling'
+                type: string
               watch:
                 description: What resources to watch
                 properties:
@@ -141,7 +325,8 @@ spec:
                       type: string
                     type: array
                   resourceTypes:
-                    description: Resource types to monitor
+                    description: Resource types to monitor (Deployment, StatefulSet,
+                      DaemonSet, CronJob)
                     items:
                       type: string
                     type: array
@@ -219,6 +404,39 @@ spec:
                 description: Corrections in the last hour
                 format: int32
                 type: integer
+              dryRunRecommendations:
+                description: 'Dry-run recommendations (last 20, only when dryRun:
+                  true)'
+                items:
+                  description: DryRunRecommendation records a resource change that
+                    would be applied if dry-run were disabled.
+                  properties:
+                    aiResponse:
+                      type: string
+                    currentCPU:
+                      type: string
+                    currentMemory:
+                      type: string
+                    namespace:
+                      type: string
+                    proposedCPU:
+                      type: string
+                    proposedMemory:
+                      type: string
+                    reason:
+                      type: string
+                    resource:
+                      type: string
+                    timestamp:
+                      format: date-time
+                      type: string
+                  required:
+                  - namespace
+                  - reason
+                  - resource
+                  - timestamp
+                  type: object
+                type: array
               lastCheckTime:
                 description: Last time the agent checked resources
                 format: date-time
@@ -307,9 +525,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null
-  storedVersions: null

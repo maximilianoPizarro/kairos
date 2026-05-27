@@ -118,15 +118,6 @@ func (r *KairosConsoleReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		console.Status.ReadyReplicas = deploy.Status.ReadyReplicas
 	}
 
-	// Set URL in status
-	if console.Spec.Route.Enabled && console.Spec.Route.Host != "" {
-		scheme := "http"
-		if console.Spec.Route.TLSEnabled {
-			scheme = "https"
-		}
-		console.Status.URL = fmt.Sprintf("%s://%s", scheme, console.Spec.Route.Host)
-	}
-
 	// Update conditions
 	meta.SetStatusCondition(&console.Status.Conditions, metav1.Condition{
 		Type:               "Ready",
@@ -453,7 +444,7 @@ func (r *KairosConsoleReconciler) reconcileService(ctx context.Context, console 
 func (r *KairosConsoleReconciler) reconcileRoute(ctx context.Context, console *kairosv1alpha1.KairosConsole) error {
 	routeName := consoleName(console)
 
-	// Determine host: use spec.route.host or leave empty for wildcard
+	// Determine host: use spec.route.host or leave empty for OpenShift wildcard assignment
 	host := console.Spec.Route.Host
 
 	// Determine TLS and target port
@@ -499,12 +490,14 @@ func (r *KairosConsoleReconciler) reconcileRoute(ctx context.Context, console *k
 
 	route.Object["spec"] = spec
 
-	// Set owner reference
+	// Set owner reference using the GVK from the scheme
 	ownerRef := metav1.OwnerReference{
-		APIVersion: console.APIVersion,
-		Kind:       console.Kind,
-		Name:       console.Name,
-		UID:        console.UID,
+		APIVersion:         kairosv1alpha1.GroupVersion.String(),
+		Kind:               "KairosConsole",
+		Name:               console.Name,
+		UID:                console.UID,
+		Controller:         boolPtr(true),
+		BlockOwnerDeletion: boolPtr(true),
 	}
 	route.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
 
@@ -517,15 +510,52 @@ func (r *KairosConsoleReconciler) reconcileRoute(ctx context.Context, console *k
 	err := r.Get(ctx, types.NamespacedName{Name: routeName, Namespace: console.Namespace}, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return r.Create(ctx, route)
+			if createErr := r.Create(ctx, route); createErr != nil {
+				return createErr
+			}
+			// After creation, read back to get the assigned host
+			return r.updateRouteStatus(ctx, console, routeName)
 		}
 		return err
 	}
 
-	// Update spec if needed
+	// Update spec if needed (preserve host assigned by router)
+	existingSpec, _, _ := unstructured.NestedMap(existing.Object, "spec")
+	if existingSpec != nil && host == "" {
+		if assignedHost, ok := existingSpec["host"]; ok {
+			spec["host"] = assignedHost
+		}
+	}
 	existing.Object["spec"] = spec
 	existing.SetLabels(route.GetLabels())
-	return r.Update(ctx, existing)
+	if updateErr := r.Update(ctx, existing); updateErr != nil {
+		return updateErr
+	}
+
+	// Update console status with the route URL
+	return r.updateRouteStatus(ctx, console, routeName)
+}
+
+// updateRouteStatus reads the Route and sets the console status URL.
+func (r *KairosConsoleReconciler) updateRouteStatus(ctx context.Context, console *kairosv1alpha1.KairosConsole, routeName string) error {
+	route := &unstructured.Unstructured{}
+	route.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "route.openshift.io",
+		Version: "v1",
+		Kind:    "Route",
+	})
+	if err := r.Get(ctx, types.NamespacedName{Name: routeName, Namespace: console.Namespace}, route); err != nil {
+		return nil // non-fatal
+	}
+	host, _, _ := unstructured.NestedString(route.Object, "spec", "host")
+	if host != "" {
+		console.Status.URL = fmt.Sprintf("https://%s", host)
+	}
+	return nil
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
 
 func (r *KairosConsoleReconciler) ensureOAuthCookieSecret(ctx context.Context, console *kairosv1alpha1.KairosConsole, secretName string) error {

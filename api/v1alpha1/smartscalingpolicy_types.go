@@ -127,6 +127,51 @@ type ScalingSchedule struct {
 	Resources corev1.ResourceRequirements `json:"resources"`
 }
 
+// MetricsAdapter configures an external metrics provider.
+type MetricsAdapter struct {
+	// Adapter type: datadog, newrelic, splunk, custom
+	// +kubebuilder:validation:Enum=datadog;newrelic;splunk;custom
+	Type string `json:"type"`
+	// API endpoint for the metrics provider
+	Endpoint string `json:"endpoint"`
+	// Secret with API key/credentials
+	// +optional
+	CredentialsSecretRef *SecretKeyRef `json:"credentialsSecretRef,omitempty"`
+	// Metric name mapping (provider-specific metric name -> standard name)
+	// +optional
+	MetricMappings map[string]string `json:"metricMappings,omitempty"`
+}
+
+// PredictiveScalingConfig enables time-series forecasting for proactive scaling.
+type PredictiveScalingConfig struct {
+	// Enable predictive scaling
+	Enabled bool `json:"enabled"`
+	// Forecast horizon (e.g. "1h", "6h", "24h")
+	ForecastWindow string `json:"forecastWindow"`
+	// Algorithm to use: linear, arima, prophet
+	// +kubebuilder:validation:Enum=linear;arima;prophet
+	// +optional
+	Algorithm string `json:"algorithm,omitempty"`
+	// Historical data lookback period (e.g. "7d", "30d")
+	// +optional
+	LookbackPeriod string `json:"lookbackPeriod,omitempty"`
+	// Confidence threshold (0.0-1.0) for applying predictions
+	// +optional
+	ConfidenceThreshold string `json:"confidenceThreshold,omitempty"`
+}
+
+// OCMSyncConfig enables policy replication via Open Cluster Management.
+type OCMSyncConfig struct {
+	// Enable OCM policy sync
+	Enabled bool `json:"enabled"`
+	// Placement rule name for target clusters
+	// +optional
+	PlacementRef string `json:"placementRef,omitempty"`
+	// Cluster selector labels
+	// +optional
+	ClusterSelector map[string]string `json:"clusterSelector,omitempty"`
+}
+
 // CostEstimationConfig enables cost-aware scaling decisions.
 type CostEstimationConfig struct {
 	// Cloud provider (aws, gcp, azure, custom)
@@ -180,6 +225,15 @@ type SmartScalingPolicySpec struct {
 	// Cost estimation integration (cloud provider pricing APIs)
 	// +optional
 	CostEstimation *CostEstimationConfig `json:"costEstimation,omitempty"`
+	// Custom metrics adapters (Datadog, New Relic, Splunk)
+	// +optional
+	MetricsAdapters []MetricsAdapter `json:"metricsAdapters,omitempty"`
+	// Predictive scaling configuration (time-series forecasting)
+	// +optional
+	PredictiveScaling *PredictiveScalingConfig `json:"predictiveScaling,omitempty"`
+	// Open Cluster Management sync: replicate policy across managed clusters
+	// +optional
+	OCMSync *OCMSyncConfig `json:"ocmSync,omitempty"`
 	// Pause all scaling actions
 	// +optional
 	Paused bool `json:"paused,omitempty"`

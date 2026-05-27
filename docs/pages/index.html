@@ -536,7 +536,7 @@
           <line x1="325" y1="0" x2="345" y2="0" stroke="#00e5ff" stroke-width="1.5"/>
           <text x="355" y="3" font-family="monospace" font-size="9" fill="#8b949e">metrics flow</text>
         </g>
-        <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v1.1.0</text>
+        <text x="870" y="490" font-family="monospace" font-size="8" fill="#30363d" text-anchor="end">kairos v2.0.0</text>
       </svg>
       <div class="img-caption">Click to enlarge — Hub + Spoke topology with centralized observability, AI model integration, and agent reporting</div>
     </div>
@@ -881,7 +881,7 @@ spec:
     <p>On each cluster (hub, east, west), run:</p>
     <pre><code># Install CRDs + operator on each cluster
 make install
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.1.0</code></pre>
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v2.0.0</code></pre>
 
     <h4>Step 2: Configure the Hub Cluster</h4>
     <p>The hub needs the <strong>Console</strong> + a <strong>KairosAgent</strong> for local monitoring:</p>
@@ -893,7 +893,7 @@ metadata:
   namespace: kairos-system
 spec:
   replicas: 1
-  image: "quay.io/maximilianopizarro/kairos-console:v1.1.0"
+  image: "quay.io/maximilianopizarro/kairos-console:v2.0.0"
   route:
     enabled: true
     # If host is empty, OpenShift auto-assigns a wildcard route
@@ -1433,7 +1433,7 @@ curl -Ik https://kairos-console.apps.your-cluster.example.com
 oc apply -f config/crd/bases/
 
 # 2. Create namespace and deploy the operator
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.1.0
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v2.0.0
 
 # 3. Create AI credentials (optional — skip for metric-only mode)
 oc create secret generic kairos-ai-credentials \

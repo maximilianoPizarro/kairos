@@ -196,7 +196,7 @@ cd kairos
 make install
 
 # Deploy the operator (uses kustomize)
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v1.1.0
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v2.0.0
 
 # Verify the operator is running
 oc get pods -n kairos-system
@@ -298,11 +298,11 @@ All images are built on Red Hat Universal Base Images (UBI9) for security and co
 Pull images:
 ```bash
 # From Quay.io
-podman pull quay.io/maximilianopizarro/kairos-operator:v1.1.0
+podman pull quay.io/maximilianopizarro/kairos-operator:v2.0.0
 podman pull quay.io/maximilianopizarro/kairos-console:v0.1.3
 
 # From GitHub Container Registry
-podman pull ghcr.io/maximilianopizarro/kairos-operator:v1.1.0
+podman pull ghcr.io/maximilianopizarro/kairos-operator:v2.0.0
 podman pull ghcr.io/maximilianopizarro/kairos-console:v0.1.3
 ```
 

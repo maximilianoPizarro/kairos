@@ -21,12 +21,13 @@ import (
 )
 
 // AgentMode defines how the agent operates.
-// +kubebuilder:validation:Enum=autopilot;supervised
+// +kubebuilder:validation:Enum=autopilot;supervised;gitops
 type AgentMode string
 
 const (
 	AgentModeAutopilot  AgentMode = "autopilot"
 	AgentModeSupervised AgentMode = "supervised"
+	AgentModeGitOps     AgentMode = "gitops"
 )
 
 // TLSConfig defines TLS settings for connections.
@@ -152,6 +153,24 @@ type ReportingConfig struct {
 	OtelExport bool `json:"otelExport,omitempty"`
 }
 
+// GitOpsConfig enables PR-based resource changes instead of direct SSA patches.
+type GitOpsConfig struct {
+	// Git repository URL (e.g. https://github.com/org/infra-config.git)
+	Repository string `json:"repository"`
+	// Branch to create PRs against (default: main)
+	// +optional
+	Branch string `json:"branch,omitempty"`
+	// Path within the repository where manifests reside
+	// +optional
+	Path string `json:"path,omitempty"`
+	// Secret reference with git credentials (token or SSH key)
+	// +optional
+	CredentialsSecretRef *SecretKeyRef `json:"credentialsSecretRef,omitempty"`
+	// PR title prefix
+	// +optional
+	PRTitlePrefix string `json:"prTitlePrefix,omitempty"`
+}
+
 // KairosAgentSpec defines the desired state of KairosAgent.
 type KairosAgentSpec struct {
 	// Operating mode: autopilot or supervised
@@ -174,6 +193,12 @@ type KairosAgentSpec struct {
 	// Notification webhook configuration (Slack/Teams/generic)
 	// +optional
 	Notifications *NotificationConfig `json:"notifications,omitempty"`
+	// GitOps configuration: generate PRs instead of direct SSA patches
+	// +optional
+	GitOps *GitOpsConfig `json:"gitops,omitempty"`
+	// SLA class reference: priority class for SLA-aware scheduling
+	// +optional
+	SLAClass string `json:"slaClass,omitempty"`
 	// Pause the agent
 	// +optional
 	Paused bool `json:"paused,omitempty"`

@@ -135,6 +135,37 @@ spec:
                 required:
                 - maxActionsPerHour
                 type: object
+              gitops:
+                description: 'GitOps configuration: generate PRs instead of direct
+                  SSA patches'
+                properties:
+                  branch:
+                    description: 'Branch to create PRs against (default: main)'
+                    type: string
+                  credentialsSecretRef:
+                    description: Secret reference with git credentials (token or SSH
+                      key)
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  path:
+                    description: Path within the repository where manifests reside
+                    type: string
+                  prTitlePrefix:
+                    description: PR title prefix
+                    type: string
+                  repository:
+                    description: Git repository URL (e.g. https://github.com/org/infra-config.git)
+                    type: string
+                required:
+                - repository
+                type: object
               hubReporting:
                 description: 'Hub reporting: push agent status to the hub console'
                 properties:
@@ -202,6 +233,7 @@ spec:
                 enum:
                 - autopilot
                 - supervised
+                - gitops
                 type: string
               notifications:
                 description: Notification webhook configuration (Slack/Teams/generic)
@@ -272,6 +304,9 @@ spec:
                 required:
                 - interval
                 type: object
+              slaClass:
+                description: 'SLA class reference: priority class for SLA-aware scheduling'
+                type: string
               watch:
                 description: What resources to watch
                 properties:

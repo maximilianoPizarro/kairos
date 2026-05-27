@@ -118,9 +118,10 @@ func (v *KairosValidator) validateKairosAgent(req admission.Request) admission.R
 	validModes := map[kairosv1alpha1.AgentMode]bool{
 		kairosv1alpha1.AgentModeAutopilot:  true,
 		kairosv1alpha1.AgentModeSupervised: true,
+		kairosv1alpha1.AgentModeGitOps:     true,
 	}
 	if !validModes[agent.Spec.Mode] {
-		return admission.Denied(fmt.Sprintf("spec.mode must be one of: autopilot, supervised (got %q)", agent.Spec.Mode))
+		return admission.Denied(fmt.Sprintf("spec.mode must be one of: autopilot, supervised, gitops (got %q)", agent.Spec.Mode))
 	}
 
 	// Validate correction policy

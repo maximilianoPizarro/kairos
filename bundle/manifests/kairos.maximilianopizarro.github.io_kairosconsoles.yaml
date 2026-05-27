@@ -1,9 +1,9 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.17.2
-  creationTimestamp: null
   name: kairosconsoles.kairos.maximilianopizarro.github.io
 spec:
   group: kairos.maximilianopizarro.github.io
@@ -52,6 +52,29 @@ spec:
               auth:
                 description: Authentication configuration
                 properties:
+                  oauth:
+                    description: OpenShift OAuth proxy configuration (only used when
+                      type=openshift-oauth)
+                    properties:
+                      cookieSecret:
+                        description: Cookie secret name for OAuth session encryption
+                        type: string
+                      httpsPort:
+                        default: 8443
+                        description: 'Custom HTTPS port for the OAuth proxy (default:
+                          8443)'
+                        format: int32
+                        type: integer
+                      image:
+                        default: registry.redhat.io/openshift4/ose-oauth-proxy:latest
+                        description: The OpenShift OAuth proxy image to use
+                        type: string
+                      requiredRole:
+                        default: cluster-admin
+                        description: 'ClusterRole required to access the console (default:
+                          cluster-admin)'
+                        type: string
+                    type: object
                   tokenSecret:
                     description: SecretKeyRef references a key in a Secret.
                     properties:
@@ -85,6 +108,48 @@ spec:
                       type: string
                     region:
                       type: string
+                    tls:
+                      description: TLS settings for this cluster connection
+                      properties:
+                        caSecretRef:
+                          description: Custom CA certificate secret reference
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        certSecretRef:
+                          description: Client certificate secret reference (mTLS)
+                          properties:
+                            key:
+                              type: string
+                            name:
+                              type: string
+                          required:
+                          - key
+                          - name
+                          type: object
+                        insecureSkipVerify:
+                          description: Skip TLS certificate verification (for disconnected/air-gapped
+                            environments)
+                          type: boolean
+                      type: object
+                    tokenSecretRef:
+                      description: Bearer token secret for authenticating to this
+                        cluster's API
+                      properties:
+                        key:
+                          type: string
+                        name:
+                          type: string
+                      required:
+                      - key
+                      - name
+                      type: object
                   required:
                   - name
                   type: object
@@ -187,9 +252,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: null
-  storedVersions: null

@@ -310,6 +310,7 @@ func (b *defaultConsoleBootstrapper) Start(ctx context.Context) error {
 		},
 		Spec: kairosv1alpha1.KairosConsoleSpec{
 			Replicas: &replicas,
+			Image:    "quay.io/maximilianopizarro/kairos-console:v2.0.0",
 			Route: kairosv1alpha1.RouteConfig{
 				Enabled: true,
 			},

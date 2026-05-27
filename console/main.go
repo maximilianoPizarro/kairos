@@ -154,6 +154,9 @@ func main() {
 	mux.HandleFunc("/api/v1/agent-report", handleAgentReport)
 	mux.HandleFunc("/api/v1/managed-resources", handleManagedResources)
 	mux.HandleFunc("/api/v1/user", handleUser)
+	mux.HandleFunc("/api/v1/approvals", handleApprovals)
+	mux.HandleFunc("/api/v1/history", handleHistory)
+	mux.HandleFunc("/api/v1/notifications", handleNotifications)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -283,8 +286,8 @@ func handleObservability(w http.ResponseWriter, r *http.Request) {
 
 	observability := map[string]interface{}{
 		"thanos": map[string]interface{}{
-			"status":       thanosStatus,
-			"endpoint":     getThanosEndpoint(),
+			"status":        thanosStatus,
+			"endpoint":      getThanosEndpoint(),
 			"activeTargets": thanosMetrics,
 		},
 		"opentelemetry": map[string]interface{}{
@@ -444,15 +447,15 @@ func handlePolicies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	policies := []map[string]interface{}{
 		{
-			"name":             "demo-policy",
-			"namespace":        "kairos-system",
-			"cluster":          "hub",
-			"target":           "kairos-console",
-			"rules":            2,
-			"paused":           false,
-			"metricsSource":    "Thanos",
+			"name":               "demo-policy",
+			"namespace":          "kairos-system",
+			"cluster":            "hub",
+			"target":             "kairos-console",
+			"rules":              2,
+			"paused":             false,
+			"metricsSource":      "Thanos",
 			"prometheusEndpoint": "thanos-querier.openshift-monitoring.svc:9091",
-			"lastAction":       time.Now().Add(-5 * time.Minute),
+			"lastAction":         time.Now().Add(-5 * time.Minute),
 		},
 	}
 	json.NewEncoder(w).Encode(policies)
@@ -543,6 +546,8 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 		"totalAgents":     3,
 		"totalPolicies":   1,
 		"totalEvents":     3,
+		"totalApprovals":  4,
+		"totalHistory":    9,
 		"uptime":          fmt.Sprintf("%dm", int(time.Since(startTime).Minutes())),
 		"metricsSource":   "Thanos Querier",
 	}
@@ -570,6 +575,215 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 		"username":      username,
 		"authenticated": authenticated,
 	})
+}
+
+func handleApprovals(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	approvals := []map[string]interface{}{
+		{
+			"id":             "appr-001",
+			"resource":       "ie-anomaly-alerter",
+			"namespace":      "industrial-edge-tst-all",
+			"cluster":        "east",
+			"agent":          "east-agent",
+			"proposedCPU":    "250m",
+			"proposedMemory": "512Mi",
+			"currentCPU":     "100m",
+			"currentMemory":  "256Mi",
+			"reason":         "CPU utilization averaging 92% over last 30 minutes; AI recommends scaling up to avoid throttling",
+			"timestamp":      time.Now().Add(-8 * time.Minute),
+		},
+		{
+			"id":             "appr-002",
+			"resource":       "line-dashboard",
+			"namespace":      "industrial-edge-tst-all",
+			"cluster":        "west",
+			"agent":          "west-agent",
+			"proposedCPU":    "150m",
+			"proposedMemory": "384Mi",
+			"currentCPU":     "200m",
+			"currentMemory":  "512Mi",
+			"reason":         "Resource over-provisioned: memory usage below 40% for 2 hours; AI recommends downsizing",
+			"timestamp":      time.Now().Add(-3 * time.Minute),
+		},
+		{
+			"id":             "appr-003",
+			"resource":       "minio",
+			"namespace":      "industrial-edge-ml-workspace",
+			"cluster":        "east",
+			"agent":          "east-agent",
+			"proposedCPU":    "750m",
+			"proposedMemory": "2Gi",
+			"currentCPU":     "500m",
+			"currentMemory":  "1Gi",
+			"reason":         "Storage I/O contention detected; scaling CPU and memory to match workload pattern",
+			"timestamp":      time.Now().Add(-12 * time.Minute),
+		},
+		{
+			"id":             "appr-004",
+			"resource":       "machine-sensor-1",
+			"namespace":      "industrial-edge-tst-all",
+			"cluster":        "west",
+			"agent":          "west-agent",
+			"proposedCPU":    "100m",
+			"proposedMemory": "256Mi",
+			"currentCPU":     "50m",
+			"currentMemory":  "128Mi",
+			"reason":         "Pod restarts detected (OOMKilled x2 in last hour); AI recommends doubling memory allocation",
+			"timestamp":      time.Now().Add(-1 * time.Minute),
+		},
+	}
+	json.NewEncoder(w).Encode(approvals)
+}
+
+func handleHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	history := []map[string]interface{}{
+		{
+			"timestamp":    time.Now().Add(-1 * time.Hour),
+			"agent":        "east-agent",
+			"resource":     "ie-anomaly-alerter",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "east",
+			"action":       "ScaleUp",
+			"beforeCPU":    "50m",
+			"beforeMemory": "128Mi",
+			"afterCPU":     "100m",
+			"afterMemory":  "256Mi",
+			"status":       "applied",
+			"aiResponse":   "CPU throttling observed at 95th percentile. Doubling requests to stabilize latency.",
+		},
+		{
+			"timestamp":    time.Now().Add(-2 * time.Hour),
+			"agent":        "west-agent",
+			"resource":     "line-dashboard",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "west",
+			"action":       "ScaleDown",
+			"beforeCPU":    "400m",
+			"beforeMemory": "1Gi",
+			"afterCPU":     "200m",
+			"afterMemory":  "512Mi",
+			"status":       "applied",
+			"aiResponse":   "Resource utilization consistently below 30% for 4 hours. Safe to reduce allocation.",
+		},
+		{
+			"timestamp":    time.Now().Add(-4 * time.Hour),
+			"agent":        "east-agent",
+			"resource":     "minio",
+			"namespace":    "industrial-edge-ml-workspace",
+			"cluster":      "east",
+			"action":       "ScaleUp",
+			"beforeCPU":    "250m",
+			"beforeMemory": "512Mi",
+			"afterCPU":     "500m",
+			"afterMemory":  "1Gi",
+			"status":       "applied",
+			"aiResponse":   "High I/O wait times correlated with training job schedule. Proactive scaling recommended.",
+		},
+		{
+			"timestamp":    time.Now().Add(-6 * time.Hour),
+			"agent":        "hub-agent",
+			"resource":     "kairos-console",
+			"namespace":    "kairos-system",
+			"cluster":      "hub",
+			"action":       "ScaleUp",
+			"beforeCPU":    "100m",
+			"beforeMemory": "128Mi",
+			"afterCPU":     "200m",
+			"afterMemory":  "256Mi",
+			"status":       "dry-run",
+			"aiResponse":   "Moderate increase suggested due to WebSocket connection growth. Dry-run mode active.",
+		},
+		{
+			"timestamp":    time.Now().Add(-8 * time.Hour),
+			"agent":        "west-agent",
+			"resource":     "machine-sensor-1",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "west",
+			"action":       "ScaleUp",
+			"beforeCPU":    "25m",
+			"beforeMemory": "64Mi",
+			"afterCPU":     "50m",
+			"afterMemory":  "128Mi",
+			"status":       "applied",
+			"aiResponse":   "OOMKilled events detected. Memory allocation insufficient for sensor data buffering.",
+		},
+		{
+			"timestamp":    time.Now().Add(-10 * time.Hour),
+			"agent":        "east-agent",
+			"resource":     "machine-sensor-2",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "east",
+			"action":       "ScaleDown",
+			"beforeCPU":    "100m",
+			"beforeMemory": "256Mi",
+			"afterCPU":     "50m",
+			"afterMemory":  "128Mi",
+			"status":       "rejected",
+			"aiResponse":   "Scaling down recommended but rejected by policy: minimum resource floor violated.",
+		},
+		{
+			"timestamp":    time.Now().Add(-14 * time.Hour),
+			"agent":        "west-agent",
+			"resource":     "ie-anomaly-alerter",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "west",
+			"action":       "ScaleUp",
+			"beforeCPU":    "75m",
+			"beforeMemory": "192Mi",
+			"afterCPU":     "100m",
+			"afterMemory":  "256Mi",
+			"status":       "applied",
+			"aiResponse":   "Anomaly detection pipeline experiencing backpressure. Increasing resources for timely alerting.",
+		},
+		{
+			"timestamp":    time.Now().Add(-18 * time.Hour),
+			"agent":        "hub-agent",
+			"resource":     "kairos-console",
+			"namespace":    "kairos-system",
+			"cluster":      "hub",
+			"action":       "NoAction",
+			"beforeCPU":    "100m",
+			"beforeMemory": "128Mi",
+			"afterCPU":     "100m",
+			"afterMemory":  "128Mi",
+			"status":       "dry-run",
+			"aiResponse":   "Current allocation matches demand. No changes required at this time.",
+		},
+		{
+			"timestamp":    time.Now().Add(-22 * time.Hour),
+			"agent":        "east-agent",
+			"resource":     "line-dashboard",
+			"namespace":    "industrial-edge-tst-all",
+			"cluster":      "east",
+			"action":       "ScaleUp",
+			"beforeCPU":    "100m",
+			"beforeMemory": "256Mi",
+			"afterCPU":     "200m",
+			"afterMemory":  "512Mi",
+			"status":       "applied",
+			"aiResponse":   "Shift change traffic spike anticipated based on historical patterns. Pre-scaling applied.",
+		},
+	}
+	json.NewEncoder(w).Encode(history)
+}
+
+func handleNotifications(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	notifications := map[string]interface{}{
+		"configured": true,
+		"webhookURL": "https://hooks.slack.com/services/T****/B****/xxxx",
+		"lastSent":   time.Now().Add(-15 * time.Minute),
+		"totalSent":  47,
+		"events": []string{
+			"scaling.applied",
+			"scaling.rejected",
+			"agent.disconnected",
+			"policy.violated",
+		},
+	}
+	json.NewEncoder(w).Encode(notifications)
 }
 
 func handleManagedResources(w http.ResponseWriter, r *http.Request) {

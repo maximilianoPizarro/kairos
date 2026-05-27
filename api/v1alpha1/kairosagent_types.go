@@ -88,11 +88,35 @@ type SecretKeyRef struct {
 	Key  string `json:"key"`
 }
 
+// PinnedResource overrides: SRE can pin workload resources for a duration.
+type PinnedResource struct {
+	Name      string      `json:"name"`
+	Namespace string      `json:"namespace"`
+	CPU       string      `json:"cpu,omitempty"`
+	Memory    string      `json:"memory,omitempty"`
+	Until     metav1.Time `json:"until"`
+}
+
+// NotificationConfig configures webhook notifications (Slack/Teams/generic).
+type NotificationConfig struct {
+	// Webhook URL (Slack incoming webhook, Teams connector, or generic)
+	WebhookURL string `json:"webhookURL"`
+	// Secret reference for webhook URL (alternative to inline)
+	// +optional
+	WebhookSecretRef *SecretKeyRef `json:"webhookSecretRef,omitempty"`
+	// Events to notify on
+	// +optional
+	Events []string `json:"events,omitempty"`
+	// Channel override (Slack only)
+	// +optional
+	Channel string `json:"channel,omitempty"`
+}
+
 // WatchConfig defines what the agent monitors.
 type WatchConfig struct {
 	// Namespaces to watch
 	Namespaces []string `json:"namespaces"`
-	// Resource types to monitor
+	// Resource types to monitor (Deployment, StatefulSet, DaemonSet, CronJob)
 	ResourceTypes []string `json:"resourceTypes"`
 	// Label selector for filtering resources
 	// +optional
@@ -144,6 +168,12 @@ type KairosAgentSpec struct {
 	// Hub reporting: push agent status to the hub console
 	// +optional
 	HubReporting *HubReportingConfig `json:"hubReporting,omitempty"`
+	// PinnedResources overrides: SRE can pin workload resources for a duration
+	// +optional
+	PinnedResources []PinnedResource `json:"pinnedResources,omitempty"`
+	// Notification webhook configuration (Slack/Teams/generic)
+	// +optional
+	Notifications *NotificationConfig `json:"notifications,omitempty"`
 	// Pause the agent
 	// +optional
 	Paused bool `json:"paused,omitempty"`
@@ -186,15 +216,15 @@ type PendingApproval struct {
 
 // DryRunRecommendation records a resource change that would be applied if dry-run were disabled.
 type DryRunRecommendation struct {
-	Timestamp     metav1.Time `json:"timestamp"`
-	Resource      string      `json:"resource"`
-	Namespace     string      `json:"namespace"`
-	CurrentCPU    string      `json:"currentCPU,omitempty"`
-	CurrentMemory string      `json:"currentMemory,omitempty"`
-	ProposedCPU   string      `json:"proposedCPU,omitempty"`
-	ProposedMemory string     `json:"proposedMemory,omitempty"`
-	Reason        string      `json:"reason"`
-	AIResponse    string      `json:"aiResponse,omitempty"`
+	Timestamp      metav1.Time `json:"timestamp"`
+	Resource       string      `json:"resource"`
+	Namespace      string      `json:"namespace"`
+	CurrentCPU     string      `json:"currentCPU,omitempty"`
+	CurrentMemory  string      `json:"currentMemory,omitempty"`
+	ProposedCPU    string      `json:"proposedCPU,omitempty"`
+	ProposedMemory string      `json:"proposedMemory,omitempty"`
+	Reason         string      `json:"reason"`
+	AIResponse     string      `json:"aiResponse,omitempty"`
 }
 
 // KairosAgentStatus defines the observed state of KairosAgent.

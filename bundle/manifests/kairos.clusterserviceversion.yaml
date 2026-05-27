@@ -156,7 +156,7 @@ metadata:
                 "region": "west"
               }
             ],
-            "image": "quay.io/maximilianopizarro/kairos-console:v1.0.0",
+            "image": "quay.io/maximilianopizarro/kairos-console:v1.1.0",
             "replicas": 1,
             "route": {
               "enabled": true,
@@ -277,7 +277,7 @@ metadata:
     createdAt: "2026-05-27T19:49:46Z"
     operators.operatorframework.io/builder: operator-sdk-v1.40.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
-  name: kairos.v1.0.0
+  name: kairos.v1.1.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -438,7 +438,7 @@ spec:
                 - --health-probe-bind-address=:8081
                 command:
                 - /manager
-                image: quay.io/maximilianopizarro/kairos-operator:v1.0.0
+                image: quay.io/maximilianopizarro/kairos-operator:v1.1.0
                 livenessProbe:
                   httpGet:
                     path: /healthz

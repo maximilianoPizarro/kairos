@@ -473,9 +473,9 @@ func (r *KairosConsoleReconciler) reconcileRoute(ctx context.Context, console *k
 	route.SetName(routeName)
 	route.SetNamespace(console.Namespace)
 	route.SetLabels(map[string]string{
-		"app":                          routeName,
-		kairosv1alpha1.LabelManagedBy:  kairosv1alpha1.LabelManagedByValue,
-		kairosv1alpha1.LabelComponent:  "console",
+		"app":                         routeName,
+		kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
+		kairosv1alpha1.LabelComponent: "console",
 	})
 
 	spec := map[string]interface{}{

@@ -203,9 +203,63 @@ spec:
                 - autopilot
                 - supervised
                 type: string
+              notifications:
+                description: Notification webhook configuration (Slack/Teams/generic)
+                properties:
+                  channel:
+                    description: Channel override (Slack only)
+                    type: string
+                  events:
+                    description: Events to notify on
+                    items:
+                      type: string
+                    type: array
+                  webhookSecretRef:
+                    description: Secret reference for webhook URL (alternative to
+                      inline)
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                  webhookURL:
+                    description: Webhook URL (Slack incoming webhook, Teams connector,
+                      or generic)
+                    type: string
+                required:
+                - webhookURL
+                type: object
               paused:
                 description: Pause the agent
                 type: boolean
+              pinnedResources:
+                description: 'PinnedResources overrides: SRE can pin workload resources
+                  for a duration'
+                items:
+                  description: 'PinnedResource overrides: SRE can pin workload resources
+                    for a duration.'
+                  properties:
+                    cpu:
+                      type: string
+                    memory:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    until:
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  - until
+                  type: object
+                type: array
               reporting:
                 description: Reporting configuration
                 properties:
@@ -236,7 +290,8 @@ spec:
                       type: string
                     type: array
                   resourceTypes:
-                    description: Resource types to monitor
+                    description: Resource types to monitor (Deployment, StatefulSet,
+                      DaemonSet, CronJob)
                     items:
                       type: string
                     type: array

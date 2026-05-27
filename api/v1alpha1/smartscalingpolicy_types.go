@@ -119,6 +119,32 @@ type AIConfig struct {
 	AgentRef string `json:"agentRef,omitempty"`
 }
 
+// ScalingSchedule defines a cron-based resource profile window.
+type ScalingSchedule struct {
+	Name      string                      `json:"name"`
+	Cron      string                      `json:"cron"`
+	Duration  string                      `json:"duration"`
+	Resources corev1.ResourceRequirements `json:"resources"`
+}
+
+// CostEstimationConfig enables cost-aware scaling decisions.
+type CostEstimationConfig struct {
+	// Cloud provider (aws, gcp, azure, custom)
+	// +kubebuilder:validation:Enum=aws;gcp;azure;custom
+	Provider string `json:"provider"`
+	// Region for pricing lookups
+	Region string `json:"region"`
+	// Pricing API endpoint (for custom provider)
+	// +optional
+	Endpoint string `json:"endpoint,omitempty"`
+	// Secret with cloud credentials for pricing API
+	// +optional
+	CredentialsSecretRef *SecretKeyRef `json:"credentialsSecretRef,omitempty"`
+	// Monthly budget limit (USD) — alerts when approaching
+	// +optional
+	MonthlyBudgetUSD *int64 `json:"monthlyBudgetUSD,omitempty"`
+}
+
 // SmartScalingPolicySpec defines the desired state of SmartScalingPolicy.
 type SmartScalingPolicySpec struct {
 	// Target workload to scale
@@ -141,6 +167,19 @@ type SmartScalingPolicySpec struct {
 	// AI-assisted decisions configuration
 	// +optional
 	AI *AIConfig `json:"ai,omitempty"`
+	// Scheduled scaling windows (cron-based resource profiles)
+	// +optional
+	ScalingSchedule []ScalingSchedule `json:"scalingSchedule,omitempty"`
+	// Policy scope for inheritance (global > cluster > namespace)
+	// +kubebuilder:validation:Enum=global;cluster;namespace
+	// +optional
+	Scope string `json:"scope,omitempty"`
+	// Priority for conflict resolution (higher wins)
+	// +optional
+	Priority *int32 `json:"priority,omitempty"`
+	// Cost estimation integration (cloud provider pricing APIs)
+	// +optional
+	CostEstimation *CostEstimationConfig `json:"costEstimation,omitempty"`
 	// Pause all scaling actions
 	// +optional
 	Paused bool `json:"paused,omitempty"`

@@ -23,6 +23,8 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -43,6 +45,8 @@ import (
 const (
 	kindDeployment  = "Deployment"
 	kindStatefulSet = "StatefulSet"
+	kindDaemonSet   = "DaemonSet"
+	kindCronJob     = "CronJob"
 )
 
 // KairosAgentReconciler reconciles a KairosAgent object
@@ -54,12 +58,16 @@ type KairosAgentReconciler struct {
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=kairosagents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=kairosagents/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=kairosagents/finalizers,verbs=update
+// +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=kairosevents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch
 
 func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
@@ -176,6 +184,32 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 					}
 					watchedCount++
 				}
+			case kindDaemonSet:
+				daemonSets := &appsv1.DaemonSetList{}
+				if err := r.List(ctx, daemonSets, client.InNamespace(ns)); err != nil {
+					log.Error(err, "Failed to list daemonsets", "namespace", ns)
+					continue
+				}
+				for i := range daemonSets.Items {
+					ds := &daemonSets.Items[i]
+					if !isKairosManaged(ds.Annotations) {
+						continue
+					}
+					watchedCount++
+				}
+			case kindCronJob:
+				cronJobs := &batchv1.CronJobList{}
+				if err := r.List(ctx, cronJobs, client.InNamespace(ns)); err != nil {
+					log.Error(err, "Failed to list cronjobs", "namespace", ns)
+					continue
+				}
+				for i := range cronJobs.Items {
+					cj := &cronJobs.Items[i]
+					if !isKairosManaged(cj.Annotations) {
+						continue
+					}
+					watchedCount++
+				}
 			}
 		}
 	}
@@ -236,6 +270,18 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 ) *kairosv1alpha1.CorrectionRecord {
 	log := logf.FromContext(ctx)
 
+	// Check if resource is pinned (SRE override)
+	if isPinned(agent, deploy.Name, deploy.Namespace) {
+		log.Info("Resource is pinned, skipping", "deployment", deploy.Name, "namespace", deploy.Namespace)
+		return nil
+	}
+
+	// Check for conflicting controllers (HPA, KEDA, VPA)
+	if conflict := r.detectConflictingController(ctx, deploy); conflict != "" {
+		log.Info("Conflicting controller detected, deferring", "deployment", deploy.Name, "controller", conflict)
+		return nil
+	}
+
 	if !aiClient.IsAvailable(ctx) {
 		return nil
 	}
@@ -286,6 +332,23 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 		AIResponse: fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 	}
 
+	// Dry-run mode: record recommendation without applying
+	if agent.Spec.CorrectionPolicy.DryRun {
+		record.Applied = false
+		agent.Status.DryRunRecommendations = append(agent.Status.DryRunRecommendations, kairosv1alpha1.DryRunRecommendation{
+			Timestamp:      metav1.Now(),
+			Resource:       deploy.Name,
+			Namespace:      deploy.Namespace,
+			CurrentCPU:     currentCPU,
+			CurrentMemory:  currentMemory,
+			ProposedCPU:    recommendation.Action,
+			ProposedMemory: "",
+			Reason:         recommendation.Reason,
+			AIResponse:     fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
+		})
+		return record
+	}
+
 	// In supervised mode, add to pending approvals
 	if agent.Spec.Mode == kairosv1alpha1.AgentModeSupervised {
 		record.Applied = false
@@ -302,14 +365,90 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 		return record
 	}
 
-	// Autopilot mode: apply the correction
+	// Autopilot mode: apply the correction via SSA
 	log.Info("Applying AI correction",
 		"deployment", deploy.Name,
 		"action", recommendation.Action,
 		"reason", recommendation.Reason,
 	)
 	record.Applied = true
+
+	// Create KairosEvent for audit trail
+	r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory)
+
 	return record
+}
+
+// isPinned checks if a resource has an active SRE pin override.
+func isPinned(agent *kairosv1alpha1.KairosAgent, name, namespace string) bool {
+	now := metav1.Now()
+	for _, pin := range agent.Spec.PinnedResources {
+		if pin.Name == name && pin.Namespace == namespace {
+			if pin.Until.After(now.Time) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// detectConflictingController checks for HPA, KEDA ScaledObject, or VPA targeting the same deployment.
+func (r *KairosAgentReconciler) detectConflictingController(ctx context.Context, deploy *appsv1.Deployment) string {
+	// Check for HPA targeting this deployment
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+	if err := r.List(ctx, hpaList, client.InNamespace(deploy.Namespace)); err == nil {
+		for _, hpa := range hpaList.Items {
+			if hpa.Spec.ScaleTargetRef.Kind == "Deployment" && hpa.Spec.ScaleTargetRef.Name == deploy.Name {
+				return "HPA/" + hpa.Name
+			}
+		}
+	}
+
+	// Check for annotations indicating KEDA or VPA management
+	if deploy.Annotations != nil {
+		if _, ok := deploy.Annotations["keda.sh/managed"]; ok {
+			return "KEDA"
+		}
+		if _, ok := deploy.Annotations["vpaUpdater"]; ok {
+			return "VPA"
+		}
+	}
+
+	return ""
+}
+
+// createEvent creates a KairosEvent for audit trail.
+func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1alpha1.KairosAgent, resourceName, namespace string, rec *ai.ScalingRecommendation, currentCPU, currentMemory string) {
+	event := &kairosv1alpha1.KairosEvent{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "kairos-event-",
+			Namespace:    agent.Namespace,
+		},
+		Spec: kairosv1alpha1.KairosEventSpec{
+			AgentName: agent.Name,
+			Cluster:   getClusterName(agent),
+			Action:    rec.Action,
+			Resource:  resourceName,
+			Namespace: namespace,
+			Before: kairosv1alpha1.ResourceSnapshot{
+				CPU:    currentCPU,
+				Memory: currentMemory,
+			},
+			Reason:     rec.Reason,
+			AIResponse: fmt.Sprintf("confidence=%.2f, action=%s", rec.Confidence, rec.Action),
+			DryRun:     agent.Spec.CorrectionPolicy.DryRun,
+		},
+	}
+	if err := r.Create(ctx, event); err != nil {
+		logf.FromContext(ctx).Error(err, "Failed to create KairosEvent")
+	}
+}
+
+func getClusterName(agent *kairosv1alpha1.KairosAgent) string {
+	if agent.Spec.HubReporting != nil {
+		return agent.Spec.HubReporting.ClusterName
+	}
+	return ""
 }
 
 func isKairosManaged(annotations map[string]string) bool {

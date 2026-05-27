@@ -258,6 +258,194 @@ spec:
     - Deployment
     - StatefulSet</code></pre>
 
+    <h3>Setting Standard Resource Limits Across All -prod Namespaces</h3>
+
+    <div class="alert alert-info">
+      <strong>Use Case:</strong> You want every Deployment and StatefulSet in namespaces ending with <code>-prod</code> to have consistent resource limits (e.g., guaranteed CPU/memory) without manually editing each one. Kairos enforces this via <code>SmartScalingPolicy</code> + <code>KairosAgent</code>.
+    </div>
+
+    <h4>Step 1: Define a SmartScalingPolicy with default limits</h4>
+    <p>Create a policy that sets baseline resource requests and limits for any workload that has <code>resources: {}</code>:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: SmartScalingPolicy
+metadata:
+  name: prod-standard-limits
+  namespace: kairos-system
+spec:
+  # Target: all Deployments across -prod namespaces
+  # (the KairosAgent discovers them via namespaceSuffix)
+  target:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: "*"              # Wildcard — applies to ALL deployments
+    namespace: "*-prod"    # Pattern — all namespaces ending in -prod
+  prometheusEndpoint: "https://thanos-querier.openshift-monitoring.svc:9091"
+
+  # Default resource baseline (applied immediately to workloads with resources: {})
+  defaultResources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  # Dynamic rules — adjust limits based on real metrics
+  rules:
+  - name: cpu-high-scale-up
+    when:
+      metric: "rate(container_cpu_usage_seconds_total{namespace=~\".*-prod\"}[5m])"
+      operator: GreaterThan
+      threshold: "0.8"
+    action:
+      type: SetResources
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "256Mi"
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+
+  - name: memory-pressure
+    when:
+      metric: "container_memory_working_set_bytes{namespace=~\".*-prod\"}"
+      operator: GreaterThan
+      threshold: "402653184"   # 384Mi
+    action:
+      type: SetResources
+      resources:
+        requests:
+          memory: "384Mi"
+        limits:
+          memory: "1Gi"
+
+  - name: low-usage-scale-down
+    when:
+      metric: "rate(container_cpu_usage_seconds_total{namespace=~\".*-prod\"}[15m])"
+      operator: LessThan
+      threshold: "0.1"
+    action:
+      type: SetResources
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "200m"
+          memory: "256Mi"</code></pre>
+
+    <h4>Step 2: Deploy a KairosAgent for -prod namespaces</h4>
+    <p>The agent discovers <em>all</em> namespaces ending in <code>-prod</code> and applies the policy to workloads annotated with <code>kairos.io/managed: "true"</code>:</p>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: prod-limits-agent
+  namespace: kairos-system
+spec:
+  mode: autopilot         # Apply limits automatically
+  aiModel:
+    apiURL: "https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions"
+    model: "deepseek-r1-distill-qwen-14b"
+    secretRef:
+      name: kairos-ai-credentials
+      key: api-key
+  watch:
+    namespaceSuffix: "-prod"      # Discovers: app-prod, api-prod, web-prod, etc.
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 20         # Allow up to 20 corrections/hour
+    rollbackOnFailure: true       # Revert if pods crash after resize
+    cooldownPeriod: "3m"          # Wait 3 min between actions on same workload
+  reporting:
+    interval: "5m"</code></pre>
+
+    <h4>Step 3: Annotate your workloads</h4>
+    <p>In your Git manifests (managed by ArgoCD or direct apply), mark workloads for Kairos management:</p>
+    <pre><code># Example: my-app in namespace "ecommerce-prod"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: ecommerce-prod
+  annotations:
+    kairos.io/managed: "true"
+    kairos.io/policy: "prod-standard-limits"
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: payment
+        image: quay.io/myorg/payment-service:v2.3.1
+        resources: {}   # ← Empty! Kairos fills this via SSA
+---
+# Example: another app in "billing-prod"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoice-processor
+  namespace: billing-prod
+  annotations:
+    kairos.io/managed: "true"
+    kairos.io/policy: "prod-standard-limits"
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: processor
+        image: quay.io/myorg/invoice-processor:v1.8.0
+        resources: {}   # ← Empty! Kairos fills this via SSA</code></pre>
+
+    <h4>Step 4: Verify Kairos applied limits</h4>
+    <pre><code># Check what Kairos set on the workload
+oc get deployment payment-service -n ecommerce-prod -o jsonpath='{.spec.template.spec.containers[0].resources}' | jq .
+{
+  "requests": { "cpu": "100m", "memory": "128Mi" },
+  "limits": { "cpu": "500m", "memory": "512Mi" }
+}
+
+# Check agent status — see how many resources are being managed
+oc get kairosagents -n kairos-system
+NAME                MODE        PHASE    WATCHED   CORRECTIONS
+prod-limits-agent   autopilot   Active   24        5
+
+# View correction events
+oc get events -n kairos-system --field-selector reason=ResourcesApplied
+LAST SEEN   TYPE     REASON             OBJECT                    MESSAGE
+2m          Normal   ResourcesApplied   deployment/payment-svc    Set resources: cpu=100m/500m mem=128Mi/512Mi
+1m          Normal   ResourcesApplied   deployment/invoice-proc   Set resources: cpu=100m/500m mem=128Mi/512Mi</code></pre>
+
+    <h4>How it works end-to-end</h4>
+    <div class="card">
+      <table>
+        <tr><td><strong>1. Discovery</strong></td><td>KairosAgent lists namespaces matching <code>*-prod</code> suffix every reconcile cycle (default 5m)</td></tr>
+        <tr><td><strong>2. Scan</strong></td><td>Within each namespace, finds Deployments/StatefulSets with <code>kairos.io/managed: "true"</code></td></tr>
+        <tr><td><strong>3. Evaluate</strong></td><td>Reads the linked SmartScalingPolicy rules and queries Thanos/OTel for current metrics</td></tr>
+        <tr><td><strong>4. Decide</strong></td><td>If workload has <code>resources: {}</code>, applies <code>defaultResources</code>. If metrics trigger a rule, applies that rule's resources.</td></tr>
+        <tr><td><strong>5. Apply</strong></td><td>Uses Server-Side Apply with field manager <code>kairos-operator</code> — only touches the <code>resources</code> field</td></tr>
+        <tr><td><strong>6. Verify</strong></td><td>Watches rollout. If pods crash within cooldown period and <code>rollbackOnFailure: true</code>, reverts to previous values</td></tr>
+      </table>
+    </div>
+
+    <h4>Common suffix patterns</h4>
+    <table>
+      <thead><tr><th>Suffix</th><th>Example Namespaces</th><th>Typical Limits</th></tr></thead>
+      <tbody>
+        <tr><td><code>-dev</code></td><td>app-dev, api-dev, web-dev</td><td>cpu: 50m/200m, mem: 64Mi/256Mi</td></tr>
+        <tr><td><code>-test</code></td><td>app-test, integration-test</td><td>cpu: 100m/500m, mem: 128Mi/512Mi</td></tr>
+        <tr><td><code>-qa</code></td><td>app-qa, regression-qa</td><td>cpu: 100m/500m, mem: 128Mi/512Mi</td></tr>
+        <tr><td><code>-prod</code></td><td>app-prod, billing-prod, api-prod</td><td>cpu: 200m/1000m, mem: 256Mi/1Gi</td></tr>
+      </tbody>
+    </table>
+
+    <div class="alert alert-warning">
+      <strong>Pro Tip:</strong> Create one <code>SmartScalingPolicy</code> per environment tier (dev, test, prod) with appropriate default limits, and one <code>KairosAgent</code> per suffix. This gives you centralized governance with environment-specific tuning.
+    </div>
+
     <h3>Console Access</h3>
     <p>The governance console is deployed on the hub cluster with an OpenShift Route:</p>
     <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1

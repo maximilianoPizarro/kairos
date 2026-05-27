@@ -1,0 +1,31 @@
+{{- if .Values.kairos.enabled }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: kairos-operator
+  namespace: {{ .Values.kairos.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  channel: alpha
+  name: kairos-operator
+  source: kairos-operator-catalog
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: kairos-operator-catalog
+  namespace: openshift-marketplace
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+spec:
+  sourceType: grpc
+  image: quay.io/maximilianopizarro/kairos-operator-catalog:v{{ .Values.kairos.operator.tag | trimPrefix "v" }}
+  displayName: Kairos Operator
+  publisher: maximilianopizarro
+  updateStrategy:
+    registryPoll:
+      interval: 30m
+{{- end }}

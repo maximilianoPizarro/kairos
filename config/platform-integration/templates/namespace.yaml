@@ -1,0 +1,10 @@
+{{- if .Values.kairos.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.kairos.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: kairos-operator
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+{{- end }}

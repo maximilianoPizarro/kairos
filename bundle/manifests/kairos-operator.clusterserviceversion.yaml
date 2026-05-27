@@ -1,0 +1,208 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: kairos-operator.v0.1.0
+  namespace: placeholder
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "kairos.maximilianopizarro.github.io/v1alpha1",
+          "kind": "SmartScalingPolicy",
+          "metadata": {"name": "example-policy"},
+          "spec": {
+            "target": {"apiVersion": "apps/v1", "kind": "Deployment", "name": "my-service", "namespace": "default"},
+            "rules": [{"name": "high-latency", "when": {"metric": "http.server.request.duration.p99", "operator": "GreaterThan", "threshold": "200", "for": "2m"}, "action": {"type": "IncreaseResources", "increaseMemoryPercent": 25, "maxMemory": "4Gi"}}]
+          }
+        },
+        {
+          "apiVersion": "kairos.maximilianopizarro.github.io/v1alpha1",
+          "kind": "KairosAgent",
+          "metadata": {"name": "example-agent"},
+          "spec": {
+            "mode": "supervised",
+            "aiModel": {"apiURL": "https://model-endpoint/v1/chat/completions", "model": "granite-31-8b"},
+            "watch": {"namespaces": ["default"], "resourceTypes": ["Deployment"]},
+            "correctionPolicy": {"maxActionsPerHour": 5, "rollbackOnFailure": true}
+          }
+        },
+        {
+          "apiVersion": "kairos.maximilianopizarro.github.io/v1alpha1",
+          "kind": "KairosConsole",
+          "metadata": {"name": "kairos-console"},
+          "spec": {
+            "route": {"enabled": true, "host": "kairos.apps.example.com"},
+            "auth": {"type": "openshift-oauth"}
+          }
+        }
+      ]
+    capabilities: Full Lifecycle
+    categories: "Integration & Delivery,AI/Machine Learning"
+    containerImage: quay.io/maximilianopizarro/kairos-operator:v0.1.0
+    createdAt: "2026-05-27T00:00:00Z"
+    description: Smart resource scaling operator with OpenTelemetry metrics and optional AI-powered autopilot for OpenShift
+    operators.operatorframework.io/builder: operator-sdk-v1.40.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
+    repository: https://github.com/maximilianoPizarro/kairos
+    support: maximilianopizarro
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Defines metric-based and schedule-based scaling rules for workloads. Uses Server-Side Apply to coexist with ArgoCD.
+      displayName: Smart Scaling Policy
+      kind: SmartScalingPolicy
+      name: smartscalingpolicies.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+    - description: AI-powered autonomous agent for resource optimization. Supports autopilot and supervised modes with guardrails.
+      displayName: Kairos Agent
+      kind: KairosAgent
+      name: kairosagents.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+    - description: Deploys the Kairos multi-cluster governance web console with PatternFly 5 UI.
+      displayName: Kairos Console
+      kind: KairosConsole
+      name: kairosconsoles.kairos.maximilianopizarro.github.io
+      version: v1alpha1
+  description: |
+    ## Kairos Operator
+
+    OpenShift operator for intelligent resource management with OpenTelemetry metrics
+    and optional AI-powered autopilot. Designed to coexist with ArgoCD in multi-cluster
+    GitOps environments.
+
+    ### Features
+
+    - **Smart Scaling Policies** - Metric-based and schedule-based rules as CRDs
+    - **AI Agents** - Optional vLLM/KServe/Ollama/OpenAI integration for autonomous optimization
+    - **OpenTelemetry Native** - Direct gRPC to OTel Collector with Prometheus fallback
+    - **ArgoCD Compatible** - Server-Side Apply on resources field only
+    - **Governance Console** - PatternFly 5 dashboard for multi-cluster visibility
+    - **Safe by Design** - Rate limiting, cooldowns, approvals, rollback
+
+    ### How it works
+
+    1. Users leave `resources: {}` empty in Git manifests (ArgoCD syncs these)
+    2. Add `kairos.io/managed: "true"` annotation to opt-in
+    3. Kairos uses Server-Side Apply to set resource requests/limits
+    4. ArgoCD never sees drift because field ownership is separated
+
+    ### Prerequisites
+
+    - OpenShift 4.17+ or Kubernetes 1.25+
+    - (Optional) Red Hat build of OpenTelemetry Operator
+    - (Optional) AI model endpoint (vLLM, KServe, Ollama)
+  displayName: Kairos Operator
+  icon:
+  - base64data: ""
+    mediatype: image/png
+  install:
+    spec:
+      deployments:
+      - label:
+          app.kubernetes.io/managed-by: kustomize
+          app.kubernetes.io/name: kairos
+          control-plane: controller-manager
+        name: kairos-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - name: manager
+                image: quay.io/maximilianopizarro/kairos-operator:v0.1.0
+                command:
+                - /manager
+                args:
+                - --leader-elect
+                ports:
+                - containerPort: 8080
+                  name: metrics
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 256Mi
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+              serviceAccountName: kairos-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups: [""]
+          resources: [configmaps]
+          verbs: [get, list, watch, create, update, patch, delete]
+        - apiGroups: [coordination.k8s.io]
+          resources: [leases]
+          verbs: [get, list, watch, create, update, patch, delete]
+        - apiGroups: [""]
+          resources: [events]
+          verbs: [create, patch]
+        serviceAccountName: kairos-controller-manager
+      clusterPermissions:
+      - rules:
+        - apiGroups: [kairos.maximilianopizarro.github.io]
+          resources: [smartscalingpolicies, kairosagents, kairosconsoles]
+          verbs: [get, list, watch, create, update, patch, delete]
+        - apiGroups: [kairos.maximilianopizarro.github.io]
+          resources: [smartscalingpolicies/status, kairosagents/status, kairosconsoles/status]
+          verbs: [get, update, patch]
+        - apiGroups: [apps]
+          resources: [deployments, statefulsets]
+          verbs: [get, list, watch, create, update, patch, delete]
+        - apiGroups: [""]
+          resources: [pods, services, serviceaccounts, secrets]
+          verbs: [get, list, watch, create, update, patch, delete]
+        - apiGroups: [route.openshift.io]
+          resources: [routes]
+          verbs: [get, list, watch, create, update, patch, delete]
+        serviceAccountName: kairos-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - scaling
+  - autoscaling
+  - ai
+  - opentelemetry
+  - multicluster
+  - governance
+  links:
+  - name: GitHub Repository
+    url: https://github.com/maximilianoPizarro/kairos
+  - name: Documentation
+    url: https://github.com/maximilianoPizarro/kairos/blob/main/README.md
+  maintainers:
+  - email: maximiliano.pizarro@example.com
+    name: Maximiliano Pizarro
+  maturity: alpha
+  minKubeVersion: 1.25.0
+  provider:
+    name: maximilianopizarro
+    url: https://github.com/maximilianoPizarro
+  version: 0.1.0

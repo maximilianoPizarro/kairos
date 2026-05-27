@@ -1,0 +1,74 @@
+name: Kairos Operator CI
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: quay.io
+  IMAGE_BASE: quay.io/maximilianopizarro
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+    - name: Run tests
+      run: make test
+    - name: Run linter
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: latest
+
+  build-and-push:
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Login to Quay.io
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Build and push operator image
+      run: |
+        make docker-build IMG=${{ env.IMAGE_BASE }}/kairos-operator:v${{ steps.version.outputs.VERSION }}
+        make docker-push IMG=${{ env.IMAGE_BASE }}/kairos-operator:v${{ steps.version.outputs.VERSION }}
+
+    - name: Build and push console image
+      run: |
+        make docker-build-console CONSOLE_IMG=${{ env.IMAGE_BASE }}/kairos-console:v${{ steps.version.outputs.VERSION }}
+        make docker-push-console CONSOLE_IMG=${{ env.IMAGE_BASE }}/kairos-console:v${{ steps.version.outputs.VERSION }}
+
+    - name: Build and push bundle
+      run: |
+        make bundle IMG=${{ env.IMAGE_BASE }}/kairos-operator:v${{ steps.version.outputs.VERSION }}
+        make bundle-build BUNDLE_IMG=${{ env.IMAGE_BASE }}/kairos-operator-bundle:v${{ steps.version.outputs.VERSION }}
+        make bundle-push BUNDLE_IMG=${{ env.IMAGE_BASE }}/kairos-operator-bundle:v${{ steps.version.outputs.VERSION }}
+
+    - name: Tag as latest
+      run: |
+        docker tag ${{ env.IMAGE_BASE }}/kairos-operator:v${{ steps.version.outputs.VERSION }} ${{ env.IMAGE_BASE }}/kairos-operator:latest
+        docker tag ${{ env.IMAGE_BASE }}/kairos-console:v${{ steps.version.outputs.VERSION }} ${{ env.IMAGE_BASE }}/kairos-console:latest
+        docker push ${{ env.IMAGE_BASE }}/kairos-operator:latest
+        docker push ${{ env.IMAGE_BASE }}/kairos-console:latest

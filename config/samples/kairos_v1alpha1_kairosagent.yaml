@@ -1,0 +1,30 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: agent-east-edge
+  namespace: kairos-system
+spec:
+  mode: autopilot
+  aiModel:
+    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
+    model: "granite-31-8b"
+    apiKeySecret:
+      name: kairos-ai-credentials
+      key: token
+    timeoutSeconds: 60
+  watch:
+    namespaces:
+    - industrial-edge-tst
+    - factory-kafka
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 10
+    requireApprovalAbove: "50%"
+    rollbackOnFailure: true
+    dryRun: false
+  reporting:
+    interval: "30s"
+    otelExport: true
+  paused: false

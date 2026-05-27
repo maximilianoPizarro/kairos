@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- kairos_v1alpha1_smartscalingpolicy.yaml
+- kairos_v1alpha1_kairosagent.yaml
+- kairos_v1alpha1_kairosconsole.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

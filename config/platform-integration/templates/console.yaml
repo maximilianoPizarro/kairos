@@ -1,0 +1,27 @@
+{{- if and .Values.kairos.enabled .Values.kairos.console.enabled }}
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosConsole
+metadata:
+  name: kairos-console
+  namespace: {{ .Values.kairos.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "8"
+spec:
+  replicas: 1
+  image: "{{ .Values.kairos.console.image }}:{{ .Values.kairos.console.tag }}"
+  route:
+    enabled: true
+    {{- if .Values.kairos.console.route.host }}
+    host: {{ .Values.kairos.console.route.host }}
+    {{- end }}
+    tlsEnabled: true
+  auth:
+    type: openshift-oauth
+  clusters:
+  - name: hub
+    region: central
+  - name: east
+    region: east
+  - name: west
+    region: west
+{{- end }}

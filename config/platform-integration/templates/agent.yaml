@@ -1,0 +1,42 @@
+{{- if and .Values.kairos.enabled .Values.kairos.ai.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.kairos.ai.secretName | default "kairos-ai-credentials" }}
+  namespace: {{ .Values.kairos.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+type: Opaque
+data:
+  token: ""  # Base64 encoded token - set via sealed-secrets or external-secrets
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: kairos-agent-hub
+  namespace: {{ .Values.kairos.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "9"
+spec:
+  mode: supervised
+  aiModel:
+    apiURL: {{ .Values.kairos.ai.model.apiURL | quote }}
+    model: {{ .Values.kairos.ai.model.model | quote }}
+    apiKeySecret:
+      name: {{ .Values.kairos.ai.secretName | default "kairos-ai-credentials" }}
+      key: token
+    timeoutSeconds: 60
+  watch:
+    namespaces:
+    - industrial-edge-tst
+    - factory-kafka
+    resourceTypes:
+    - Deployment
+    - StatefulSet
+  correctionPolicy:
+    maxActionsPerHour: 10
+    requireApprovalAbove: "50%"
+    rollbackOnFailure: true
+  reporting:
+    interval: "30s"
+{{- end }}

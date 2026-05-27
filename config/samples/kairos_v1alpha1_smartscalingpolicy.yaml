@@ -1,0 +1,46 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: SmartScalingPolicy
+metadata:
+  name: kafka-scaling-policy
+  namespace: kairos-system
+spec:
+  target:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: factory-kafka
+    namespace: industrial-edge-tst
+  otelEndpoint: "otel-collector.observability:4317"
+  prometheusEndpoint: "prometheus-k8s.openshift-monitoring:9090"
+  rules:
+  - name: high-latency-vertical
+    when:
+      metric: "http.server.request.duration.p99"
+      operator: GreaterThan
+      threshold: "200"
+      for: "2m"
+    action:
+      type: IncreaseResources
+      increaseMemoryPercent: 25
+      maxMemory: "4Gi"
+      increaseCPUPercent: 20
+      maxCPU: "4"
+      cooldown: "5m"
+  - name: queue-depth-horizontal
+    when:
+      metric: "messaging.queue.depth"
+      operator: GreaterThan
+      threshold: "500"
+    action:
+      type: AddReplicas
+      replicas: 2
+      maxReplicas: 8
+      cooldown: "10m"
+  schedule:
+  - name: peak-hours-preemptive
+    cron: "0 8 * * 1-5"
+    action:
+      type: SetMinReplicas
+      minReplicas: 5
+  ai:
+    enabled: false
+  paused: false

@@ -7,7 +7,7 @@ COPY console/frontend/ .
 RUN npm run build
 
 # Build backend
-FROM registry.access.redhat.com/ubi9/go-toolset:1.22 AS backend-builder
+FROM registry.access.redhat.com/ubi9/go-toolset:latest AS backend-builder
 WORKDIR /opt/app-root/src
 COPY console/go.mod console/go.sum ./
 RUN go mod download

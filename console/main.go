@@ -130,13 +130,18 @@ func main() {
 		}()
 	})
 
-	// Serve static frontend files
-	staticFS, err := fs.Sub(staticFiles, "static")
-	if err != nil {
-		log.Fatal("Failed to create static filesystem:", err)
+	// Serve static frontend files - prefer filesystem over embedded
+	var fileHandler http.Handler
+	if _, statErr := os.Stat("/static/index.html"); statErr == nil {
+		fileHandler = http.FileServer(http.Dir("/static"))
+	} else {
+		staticFS, fsErr := fs.Sub(staticFiles, "static")
+		if fsErr != nil {
+			log.Fatal("Failed to create static filesystem:", fsErr)
+		}
+		fileHandler = http.FileServer(http.FS(staticFS))
 	}
-	fileServer := http.FileServer(http.FS(staticFS))
-	mux.Handle("/", fileServer)
+	mux.Handle("/", fileHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -1,42 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Kairos">
-  <!-- Kubernetes helm: 6-spoke wheel -->
-  <g fill="none" stroke="#3949ab" stroke-width="1.1" stroke-linecap="round" opacity="0.55">
-    <circle cx="24" cy="22" r="14.5"/>
-    <line x1="24" y1="22" x2="24" y2="7.5"/>
-    <line x1="24" y1="22" x2="36.6" y2="15.5"/>
-    <line x1="24" y1="22" x2="36.6" y2="28.5"/>
-    <line x1="24" y1="22" x2="24" y2="36.5"/>
-    <line x1="24" y1="22" x2="11.4" y2="28.5"/>
-    <line x1="24" y1="22" x2="11.4" y2="15.5"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Kairos Operator">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00bcd4"/>
+      <stop offset="100%" stop-color="#1a237e"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#0091ea"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Wing -->
-  <g fill="#00bcd4">
-    <path d="M8 17 C12 14, 17 13, 21 14 C17 16, 14 19, 12 21 C10 19, 8 17, 8 17 Z" opacity="0.45"/>
-    <path d="M6 21 C11 18, 17 17, 22 19 C18 21, 15 24, 13 26 C10 24, 7 22, 6 21 Z"/>
-  </g>
+  <!-- Background circle -->
+  <circle cx="24" cy="24" r="23" fill="#0d1117"/>
+  <circle cx="24" cy="24" r="22" fill="none" stroke="url(#g2)" stroke-width="0.8" opacity="0.6"/>
 
-  <!-- K stem -->
-  <rect x="15" y="9" width="3" height="26" rx="0.5" fill="#1a237e"/>
+  <!-- Hourglass (kairos symbol) -->
+  <path d="M17 10 L31 10 L25.5 22.5 L24 24 L22.5 22.5 L17 10 Z" fill="url(#g1)" opacity="0.9"/>
+  <path d="M17 38 L31 38 L25.5 25.5 L24 24 L22.5 25.5 L17 38 Z" fill="url(#g1)" opacity="0.9"/>
 
-  <!-- Hourglass -->
-  <path
-    fill="#1a237e"
-    d="M18 9 L33 9 L26 22 L33 35 L18 35 L24 22 Z"
-  />
+  <!-- Hourglass frame -->
+  <path d="M16 9 L32 9" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M16 39 L32 39" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M17 9 L17 12 Q17 14 19 16 L24 24 L19 32 Q17 34 17 36 L17 39" stroke="#00e5ff" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M31 9 L31 12 Q31 14 29 16 L24 24 L29 32 Q31 34 31 36 L31 39" stroke="#00e5ff" stroke-width="1" fill="none" stroke-linecap="round"/>
 
-  <!-- K arms -->
-  <path
-    fill="none"
-    stroke="#00bcd4"
-    stroke-width="1.5"
-    stroke-linejoin="round"
-    stroke-linecap="round"
-    d="M18 22 L33 9 M18 22 L33 35"
-  />
+  <!-- Wing left -->
+  <path d="M12 20 C9 18, 5 17, 3 18 C5 20, 8 22, 12 23 C10 21, 11 20, 12 20 Z" fill="#00bcd4" opacity="0.7"/>
+  <path d="M14 23 C10 22, 6 21, 3 22 C6 24, 9 25, 14 26 Z" fill="#00e5ff" opacity="0.5"/>
 
-  <!-- Opportune moment pivot -->
-  <circle cx="24" cy="22" r="1.8" fill="#00bcd4"/>
-  <circle cx="24" cy="22" r="0.75" fill="#1a237e"/>
+  <!-- Wing right -->
+  <path d="M36 20 C39 18, 43 17, 45 18 C43 20, 40 22, 36 23 C38 21, 37 20, 36 20 Z" fill="#00bcd4" opacity="0.7"/>
+  <path d="M34 23 C38 22, 42 21, 45 22 C42 24, 39 25, 34 26 Z" fill="#00e5ff" opacity="0.5"/>
+
+  <!-- Central pivot - the opportune moment -->
+  <circle cx="24" cy="24" r="2.5" fill="#00e5ff"/>
+  <circle cx="24" cy="24" r="1.2" fill="#0d1117"/>
+
+  <!-- Sand particles (flowing time) -->
+  <circle cx="24" cy="15" r="0.6" fill="#ffab40" opacity="0.8"/>
+  <circle cx="23" cy="17" r="0.4" fill="#ffab40" opacity="0.6"/>
+  <circle cx="25" cy="16" r="0.4" fill="#ffab40" opacity="0.7"/>
+  <circle cx="24" cy="32" r="0.5" fill="#ffab40" opacity="0.6"/>
+  <circle cx="23.5" cy="34" r="0.4" fill="#ffab40" opacity="0.5"/>
 </svg>

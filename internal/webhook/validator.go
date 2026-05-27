@@ -23,7 +23,6 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kairosv1alpha1 "github.com/maximilianoPizarro/kairos/api/v1alpha1"
@@ -31,7 +30,6 @@ import (
 
 var (
 	scheme = runtime.NewScheme()
-	codecs = serializer.NewCodecFactory(scheme)
 )
 
 func init() {

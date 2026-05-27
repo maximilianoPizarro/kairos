@@ -133,10 +133,60 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	)
 
 	// Scan watched resources
-	var watchedCount int32
-	var corrections []kairosv1alpha1.CorrectionRecord
+	watchNamespaces := r.resolveWatchNamespaces(ctx, agent)
+	watchedCount, corrections := r.scanResources(ctx, agent, watchNamespaces, aiClient)
 
-	// Resolve namespaces from suffix
+	// Update status
+	now := metav1.Now()
+	agent.Status.LastCheckTime = &now
+	agent.Status.WatchedResources = watchedCount
+
+	if len(corrections) > 0 {
+		agent.Status.Phase = kairosv1alpha1.AgentPhaseCorrecting
+		agent.Status.TotalCorrections += int32(len(corrections))
+		agent.Status.RecentCorrections = appendCorrections(agent.Status.RecentCorrections, corrections, 20)
+	} else {
+		agent.Status.Phase = kairosv1alpha1.AgentPhaseActive
+	}
+
+	// Check rate limit
+	if agent.Status.CorrectionsLastHour >= agent.Spec.CorrectionPolicy.MaxActionsPerHour {
+		agent.Status.Phase = kairosv1alpha1.AgentPhaseIdle
+		meta.SetStatusCondition(&agent.Status.Conditions, metav1.Condition{
+			Type:               "RateLimited",
+			Status:             metav1.ConditionTrue,
+			Reason:             "MaxActionsReached",
+			Message:            "Reached maximum corrections per hour",
+			LastTransitionTime: metav1.Now(),
+		})
+	}
+
+	meta.SetStatusCondition(&agent.Status.Conditions, metav1.Condition{
+		Type:               "Ready",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Running",
+		Message:            fmt.Sprintf("Watching %d resources across %d namespaces", watchedCount, len(watchNamespaces)),
+		LastTransitionTime: metav1.Now(),
+	})
+
+	if err := r.Status().Update(ctx, agent); err != nil {
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+	}
+
+	// Requeue based on reporting interval (default 30s)
+	requeueInterval := 30 * time.Second
+	if agent.Spec.Reporting != nil {
+		if d, err := time.ParseDuration(agent.Spec.Reporting.Interval); err == nil {
+			requeueInterval = d
+		}
+	}
+
+	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+}
+
+// resolveWatchNamespaces builds the list of namespaces to watch.
+func (r *KairosAgentReconciler) resolveWatchNamespaces(ctx context.Context, agent *kairosv1alpha1.KairosAgent) []string {
+	log := logf.FromContext(ctx)
 	watchNamespaces := agent.Spec.Watch.Namespaces
 	if agent.Spec.Watch.NamespaceSuffix != "" {
 		nsList := &corev1.NamespaceList{}
@@ -150,8 +200,16 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	}
+	return watchNamespaces
+}
 
-	for _, ns := range watchNamespaces {
+// scanResources iterates namespaces and resource types, returning watched count and corrections.
+func (r *KairosAgentReconciler) scanResources(ctx context.Context, agent *kairosv1alpha1.KairosAgent, namespaces []string, aiClient ai.AIClient) (int32, []kairosv1alpha1.CorrectionRecord) {
+	log := logf.FromContext(ctx)
+	var watchedCount int32
+	var corrections []kairosv1alpha1.CorrectionRecord
+
+	for _, ns := range namespaces {
 		for _, resType := range agent.Spec.Watch.ResourceTypes {
 			switch resType {
 			case kindDeployment:
@@ -213,53 +271,7 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 		}
 	}
-
-	// Update status
-	now := metav1.Now()
-	agent.Status.LastCheckTime = &now
-	agent.Status.WatchedResources = watchedCount
-
-	if len(corrections) > 0 {
-		agent.Status.Phase = kairosv1alpha1.AgentPhaseCorrecting
-		agent.Status.TotalCorrections += int32(len(corrections))
-		agent.Status.RecentCorrections = appendCorrections(agent.Status.RecentCorrections, corrections, 20)
-	} else {
-		agent.Status.Phase = kairosv1alpha1.AgentPhaseActive
-	}
-
-	// Check rate limit
-	if agent.Status.CorrectionsLastHour >= agent.Spec.CorrectionPolicy.MaxActionsPerHour {
-		agent.Status.Phase = kairosv1alpha1.AgentPhaseIdle
-		meta.SetStatusCondition(&agent.Status.Conditions, metav1.Condition{
-			Type:               "RateLimited",
-			Status:             metav1.ConditionTrue,
-			Reason:             "MaxActionsReached",
-			Message:            "Reached maximum corrections per hour",
-			LastTransitionTime: metav1.Now(),
-		})
-	}
-
-	meta.SetStatusCondition(&agent.Status.Conditions, metav1.Condition{
-		Type:               "Ready",
-		Status:             metav1.ConditionTrue,
-		Reason:             "Running",
-		Message:            fmt.Sprintf("Watching %d resources across %d namespaces", watchedCount, len(watchNamespaces)),
-		LastTransitionTime: metav1.Now(),
-	})
-
-	if err := r.Status().Update(ctx, agent); err != nil {
-		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
-	}
-
-	// Requeue based on reporting interval (default 30s)
-	requeueInterval := 30 * time.Second
-	if agent.Spec.Reporting != nil {
-		if d, err := time.ParseDuration(agent.Spec.Reporting.Interval); err == nil {
-			requeueInterval = d
-		}
-	}
-
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return watchedCount, corrections
 }
 
 func (r *KairosAgentReconciler) evaluateDeployment(

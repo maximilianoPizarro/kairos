@@ -252,16 +252,16 @@
         <div class="desc">Custom Resources (CRDs)</div>
       </div>
       <div class="stat-card">
-        <div class="number">∞</div>
-        <div class="desc">Clusters managed</div>
+        <div class="number">Hub + N</div>
+        <div class="desc">Spoke clusters supported</div>
       </div>
       <div class="stat-card">
-        <div class="number">0</div>
-        <div class="desc">ArgoCD conflicts</div>
+        <div class="number">SSA</div>
+        <div class="desc">Zero ArgoCD conflicts</div>
       </div>
       <div class="stat-card">
-        <div class="number">5</div>
-        <div class="desc">AI models supported</div>
+        <div class="number">5+</div>
+        <div class="desc">AI models (OpenAI-compat)</div>
       </div>
     </div>
 
@@ -971,9 +971,9 @@ spec:
     model: "none"
   watch:
     namespaces:                    # Explicit namespace list
-    - industrial-edge-tst-all
-    - industrial-edge-ml-workspace
-    - industrial-edge-data-lake
+    - app-prod
+    - api-prod
+    - payments-prod
     # OR use dynamic discovery:
     # namespaceSuffix: "-prod"
     resourceTypes:
@@ -1007,11 +1007,11 @@ spec:
     <h4>Step 4: Annotate Workloads on Spoke Clusters</h4>
     <p>Mark Deployments/StatefulSets on spoke clusters that Kairos should manage and report:</p>
     <pre><code># On the EAST cluster:
-oc annotate deployment ie-anomaly-alerter -n industrial-edge-tst-all kairos.io/managed="true"
-oc annotate deployment line-dashboard -n industrial-edge-tst-all kairos.io/managed="true"
-oc annotate deployment machine-sensor-1 -n industrial-edge-tst-all kairos.io/managed="true"
-oc annotate deployment machine-sensor-2 -n industrial-edge-tst-all kairos.io/managed="true"
-oc annotate deployment minio -n industrial-edge-ml-workspace kairos.io/managed="true"</code></pre>
+oc annotate deployment my-api -n app-prod kairos.io/managed="true"
+oc annotate deployment web-frontend -n app-prod kairos.io/managed="true"
+oc annotate deployment payment-service -n payments-prod kairos.io/managed="true"
+oc annotate deployment worker -n api-prod kairos.io/managed="true"
+oc annotate deployment cache -n api-prod kairos.io/managed="true"</code></pre>
 
     <h4>Step 5: Verify End-to-End</h4>
     <pre><code># On each cluster, verify agents:
@@ -1500,7 +1500,7 @@ oc get kairosagents -n kairos-system</code></pre>
           <tr><td><code>mode</code></td><td>autopilot / supervised</td></tr>
           <tr><td><code>aiModel</code></td><td>API URL + model + secret + TLS</td></tr>
           <tr><td><code>watch</code></td><td>Namespaces + suffix + types + labels</td></tr>
-          <tr><td><code>correctionPolicy</code></td><td>Rate limits + rollback + cooldown</td></tr>
+          <tr><td><code>correctionPolicy</code></td><td>Rate limits + rollback + <strong>dryRun</strong></td></tr>
           <tr><td><code>hubReporting</code></td><td>Push status to hub console</td></tr>
           <tr><td><code>reporting</code></td><td>Interval + OTel export</td></tr>
         </table>
@@ -1517,6 +1517,121 @@ oc get kairosagents -n kairos-system</code></pre>
         </table>
       </div>
     </div>
+
+    <h3>CRD Relationship Model</h3>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 200" style="max-width:700px; margin: 1rem auto; display: block;">
+      <rect width="700" height="200" fill="#0d1117" rx="8"/>
+      <rect x="20" y="60" width="180" height="80" rx="6" fill="#1a1a2e" stroke="#7c4dff" stroke-width="2"/>
+      <text x="110" y="90" font-family="monospace" font-size="12" fill="#7c4dff" text-anchor="middle" font-weight="bold">SmartScalingPolicy</text>
+      <text x="110" y="110" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">rules + metrics + target</text>
+      <text x="110" y="125" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">↓ applies resources</text>
+      <rect x="260" y="60" width="180" height="80" rx="6" fill="#1a1a2e" stroke="#00e5ff" stroke-width="2"/>
+      <text x="350" y="90" font-family="monospace" font-size="12" fill="#00e5ff" text-anchor="middle" font-weight="bold">KairosAgent</text>
+      <text x="350" y="110" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">watches + corrects</text>
+      <text x="350" y="125" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">↑ uses policies</text>
+      <rect x="500" y="60" width="180" height="80" rx="6" fill="#1a1a2e" stroke="#ffab40" stroke-width="2"/>
+      <text x="590" y="90" font-family="monospace" font-size="12" fill="#ffab40" text-anchor="middle" font-weight="bold">KairosConsole</text>
+      <text x="590" y="110" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">visualizes + governs</text>
+      <text x="590" y="125" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">← receives reports</text>
+      <line x1="200" y1="100" x2="258" y2="100" stroke="#00e5ff" stroke-width="1.5"/>
+      <line x1="440" y1="100" x2="498" y2="100" stroke="#ffab40" stroke-width="1.5"/>
+      <text x="230" y="93" font-family="monospace" font-size="8" fill="#00e5ff">enforces</text>
+      <text x="462" y="93" font-family="monospace" font-size="8" fill="#ffab40">reports to</text>
+      <text x="350" y="170" font-family="monospace" font-size="10" fill="#4caf50" text-anchor="middle">Workloads (Deployment / StatefulSet) with kairos.io/managed: "true"</text>
+      <line x1="110" y1="140" x2="110" y2="160" stroke="#7c4dff" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="350" y1="140" x2="350" y2="160" stroke="#00e5ff" stroke-width="1" stroke-dasharray="3,2"/>
+      <text x="350" y="25" font-family="monospace" font-size="14" fill="#fff" text-anchor="middle">Kairos Object Model</text>
+    </svg>
+
+    <h3>Dry-Run Mode</h3>
+    <div class="alert alert-info">
+      <strong>Safe adoption:</strong> Enable <code>dryRun: true</code> to see what Kairos <em>would</em> change without actually modifying any workload.
+      Recommendations appear in the agent's <code>.status.dryRunRecommendations</code> and in the console Events page.
+    </div>
+    <pre><code>apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: prod-agent
+  namespace: kairos-system
+spec:
+  mode: autopilot
+  correctionPolicy:
+    dryRun: true           # ← Recommendations only, no changes applied
+    maxActionsPerHour: 20
+    rollbackOnFailure: true
+  # ... rest of spec</code></pre>
+    <p>To view dry-run recommendations:</p>
+    <pre><code># View recommendations in agent status
+oc get kairosagent prod-agent -n kairos-system -o jsonpath='{.status.dryRunRecommendations}' | jq .
+
+# List agents showing DryRun column
+oc get kairosagents -n kairos-system
+NAME         MODE        DRYRUN   PHASE    CORRECTIONS   AGE
+prod-agent   autopilot   true     Active   0             5m</code></pre>
+
+    <h3>RBAC — Minimum Permissions</h3>
+    <h4>Spoke Agent (minimum ClusterRole)</h4>
+    <pre><code>apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kairos-spoke-minimum
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch", "patch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["kairos.maximilianopizarro.github.io"]
+  resources: ["*"]
+  verbs: ["*"]</code></pre>
+    <h4>Console ServiceAccount</h4>
+    <table>
+      <thead><tr><th>ClusterRole</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>kairos-console-resources</code></td><td>get, list, watch on deployments, statefulsets, namespaces</td></tr>
+        <tr><td><code>cluster-monitoring-view</code></td><td>Query Thanos/Prometheus metrics</td></tr>
+        <tr><td><code>system:auth-delegator</code></td><td>Only when OAuth enabled</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Operator Metrics (Self-Observability)</h3>
+    <p>The operator exposes Prometheus metrics at <code>:8443/metrics</code>:</p>
+    <table>
+      <thead><tr><th>Metric</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>controller_runtime_reconcile_total</code></td><td>Counter</td><td>Reconciliations per controller</td></tr>
+        <tr><td><code>controller_runtime_reconcile_errors_total</code></td><td>Counter</td><td>Reconciliation errors</td></tr>
+        <tr><td><code>controller_runtime_reconcile_time_seconds</code></td><td>Histogram</td><td>Reconciliation latency</td></tr>
+        <tr><td><code>workqueue_depth</code></td><td>Gauge</td><td>Queue depth</td></tr>
+      </tbody>
+    </table>
+    <pre><code># ServiceMonitor for OpenShift Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kairos-operator
+  namespace: kairos-system
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  endpoints:
+  - port: https
+    scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true</code></pre>
+
+    <h3>SSA Conflict Resolution</h3>
+    <table>
+      <thead><tr><th>Controller</th><th>Manages</th><th>Kairos Behavior</th></tr></thead>
+      <tbody>
+        <tr><td>HPA / KEDA</td><td><code>spec.replicas</code></td><td>No conflict — Kairos only manages <code>resources</code></td></tr>
+        <tr><td>VPA</td><td><code>resources.requests</code></td><td>⚠️ Conflict — disable VPA or set Kairos <code>dryRun: true</code></td></tr>
+        <tr><td>ArgoCD</td><td>Full manifest</td><td>No conflict — uses <code>ignoreDifferences</code> + SSA</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
@@ -1527,7 +1642,7 @@ oc get kairosagents -n kairos-system</code></pre>
 
 <footer>
   <p><strong>Kairos Operator</strong> — Apache License 2.0</p>
-  <p><a href="https://github.com/maximilianoPizarro/kairos">GitHub Repository</a> · <a href="https://quay.io/organization/maximilianopizarro">Container Images (Quay.io)</a> · <a href="https://github.com/maximilianoPizarro/kairos/pkgs/container/kairos-operator">GHCR</a></p>
+  <p><a href="https://github.com/maximilianoPizarro/kairos">GitHub Repository</a> · <a href="https://github.com/maximilianoPizarro/kairos/blob/main/ROADMAP.md">Roadmap</a> · <a href="https://quay.io/organization/maximilianopizarro">Container Images (Quay.io)</a> · <a href="https://github.com/maximilianoPizarro/kairos/pkgs/container/kairos-operator">GHCR</a></p>
   <p style="margin-top: 0.5rem; font-style: italic; color: #6a737d;">Built with Go, PatternFly 5, Red Hat UBI — designed for OpenShift multi-cluster environments</p>
 </footer>
 

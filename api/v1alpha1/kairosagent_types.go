@@ -48,6 +48,12 @@ type HubReportingConfig struct {
 	Enabled bool `json:"enabled"`
 	// Hub console API endpoint (e.g. https://kairos-console.apps.hub-cluster.example.com)
 	Endpoint string `json:"endpoint"`
+	// Cluster name as displayed in the hub console (e.g. "east", "west", "factory-floor")
+	// +optional
+	ClusterName string `json:"clusterName,omitempty"`
+	// Skip TLS verification for hub connection (air-gapped / self-signed certs)
+	// +optional
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 	// Bearer token secret for authenticating to the hub
 	// +optional
 	TokenSecretRef *SecretKeyRef `json:"tokenSecretRef,omitempty"`
@@ -178,6 +184,19 @@ type PendingApproval struct {
 	AIResponse string      `json:"aiResponse,omitempty"`
 }
 
+// DryRunRecommendation records a resource change that would be applied if dry-run were disabled.
+type DryRunRecommendation struct {
+	Timestamp     metav1.Time `json:"timestamp"`
+	Resource      string      `json:"resource"`
+	Namespace     string      `json:"namespace"`
+	CurrentCPU    string      `json:"currentCPU,omitempty"`
+	CurrentMemory string      `json:"currentMemory,omitempty"`
+	ProposedCPU   string      `json:"proposedCPU,omitempty"`
+	ProposedMemory string     `json:"proposedMemory,omitempty"`
+	Reason        string      `json:"reason"`
+	AIResponse    string      `json:"aiResponse,omitempty"`
+}
+
 // KairosAgentStatus defines the observed state of KairosAgent.
 type KairosAgentStatus struct {
 	// Current phase of the agent
@@ -195,6 +214,9 @@ type KairosAgentStatus struct {
 	// Recent corrections (last 20)
 	// +optional
 	RecentCorrections []CorrectionRecord `json:"recentCorrections,omitempty"`
+	// Dry-run recommendations (last 20, only when dryRun: true)
+	// +optional
+	DryRunRecommendations []DryRunRecommendation `json:"dryRunRecommendations,omitempty"`
 	// Pending approvals (supervised mode)
 	// +optional
 	PendingApprovals []PendingApproval `json:"pendingApprovals,omitempty"`
@@ -210,6 +232,7 @@ type KairosAgentStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Mode",type=string,JSONPath=`.spec.mode`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="DryRun",type=boolean,JSONPath=`.spec.correctionPolicy.dryRun`
 // +kubebuilder:printcolumn:name="Corrections",type=integer,JSONPath=`.status.totalCorrections`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 

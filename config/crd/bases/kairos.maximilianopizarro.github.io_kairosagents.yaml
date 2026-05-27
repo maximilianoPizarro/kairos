@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - jsonPath: .spec.correctionPolicy.dryRun
+      name: DryRun
+      type: boolean
     - jsonPath: .status.totalCorrections
       name: Corrections
       type: integer
@@ -135,12 +138,20 @@ spec:
               hubReporting:
                 description: 'Hub reporting: push agent status to the hub console'
                 properties:
+                  clusterName:
+                    description: Cluster name as displayed in the hub console (e.g.
+                      "east", "west", "factory-floor")
+                    type: string
                   enabled:
                     description: Enable reporting agent status to hub console
                     type: boolean
                   endpoint:
                     description: Hub console API endpoint (e.g. https://kairos-console.apps.hub-cluster.example.com)
                     type: string
+                  insecureSkipVerify:
+                    description: Skip TLS verification for hub connection (air-gapped
+                      / self-signed certs)
+                    type: boolean
                   tls:
                     description: TLS settings for hub communication
                     properties:
@@ -303,6 +314,39 @@ spec:
                 description: Corrections in the last hour
                 format: int32
                 type: integer
+              dryRunRecommendations:
+                description: 'Dry-run recommendations (last 20, only when dryRun:
+                  true)'
+                items:
+                  description: DryRunRecommendation records a resource change that
+                    would be applied if dry-run were disabled.
+                  properties:
+                    aiResponse:
+                      type: string
+                    currentCPU:
+                      type: string
+                    currentMemory:
+                      type: string
+                    namespace:
+                      type: string
+                    proposedCPU:
+                      type: string
+                    proposedMemory:
+                      type: string
+                    reason:
+                      type: string
+                    resource:
+                      type: string
+                    timestamp:
+                      format: date-time
+                      type: string
+                  required:
+                  - namespace
+                  - reason
+                  - resource
+                  - timestamp
+                  type: object
+                type: array
               lastCheckTime:
                 description: Last time the agent checked resources
                 format: date-time

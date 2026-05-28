@@ -1,6 +1,17 @@
 # Kairos Operator — Roadmap
 
-## Current: v2.0.0 (Released)
+## Current: v2.0.1 (Released — Security Patch)
+
+- [x] CVE-2026-33186 (CRITICAL): google.golang.org/grpc → v1.81.1
+- [x] CVE-2026-24051 (HIGH): go.opentelemetry.io/otel/sdk → v1.44.0
+- [x] CVE-2026-39883 (HIGH): go.opentelemetry.io/otel/sdk → v1.44.0
+- [x] CVE-2025-22868 (HIGH): golang.org/x/oauth2 → v0.30.0
+- [x] All images pass Trivy scan with 0 HIGH/CRITICAL vulnerabilities
+- [x] Tested on hub + east + west clusters via operator-sdk run bundle
+
+---
+
+## Previous: v2.0.0 (Released)
 
 All features through v1.1.0 plus:
 

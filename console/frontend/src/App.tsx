@@ -122,7 +122,7 @@ export const App: React.FC = () => {
           <ToolbarContent>
             <ToolbarGroup align={{ default: 'alignLeft' }}>
               <ToolbarItem>
-                <Label color="green">Operator v2.0.0</Label>
+                <Label color="green">Operator v2.0.1</Label>
               </ToolbarItem>
               <ToolbarItem>
                 <Label color="blue">3 Clusters</Label>

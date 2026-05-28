@@ -2,8 +2,6 @@ module github.com/maximilianoPizarro/kairos
 
 go 1.25.0
 
-godebug default=go1.23
-
 require (
 	github.com/onsi/ginkgo/v2 v2.22.0
 	github.com/onsi/gomega v1.36.1

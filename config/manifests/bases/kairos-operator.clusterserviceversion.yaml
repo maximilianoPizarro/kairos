@@ -280,6 +280,3 @@ spec:
     - group: batch
       version: v1
       kind: CronJob
-    - group: route.openshift.io
-      version: v1
-      kind: Route

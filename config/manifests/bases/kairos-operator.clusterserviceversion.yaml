@@ -60,11 +60,11 @@ metadata:
     categories: "AI/Machine Learning, Monitoring"
     description: "AI-powered Kubernetes resource optimizer with SSA, ArgoCD-safe, multi-cluster governance"
     repository: "https://github.com/maximilianoPizarro/kairos"
-    containerImage: "quay.io/maximilianopizarro/kairos-operator:v2.0.0"
+    containerImage: "quay.io/maximilianopizarro/kairos-operator:v2.0.1"
     createdAt: "2026-05-27T00:00:00Z"
     support: "maximilianopizarro"
     operatorframework.io/suggested-namespace: kairos-system
-  name: kairos.v0.0.0
+  name: kairos-operator.v0.0.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}

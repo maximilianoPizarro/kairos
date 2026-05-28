@@ -16,7 +16,7 @@ env:
   CATALOG_IMG: quay.io/maximilianopizarro/kairos-operator-catalog
   GHCR_OPERATOR_IMG: ghcr.io/maximilianopizarro/kairos-operator
   GHCR_CONSOLE_IMG: ghcr.io/maximilianopizarro/kairos-console
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.25'
   OPERATOR_SDK_VERSION: 'v1.40.0'
 
 jobs:

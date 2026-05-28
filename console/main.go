@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -83,6 +84,47 @@ var agentStore = struct {
 	agents:    make(map[string]*AgentReport),
 	events:    make([]map[string]interface{}, 0),
 	resources: make([]ManagedResource, 0),
+}
+
+// approvalStore holds pending approval requests (thread-safe)
+var approvalStore = struct {
+	sync.RWMutex
+	items []map[string]interface{}
+}{
+	items: []map[string]interface{}{
+		{
+			"id": "appr-001", "resource": "ie-anomaly-alerter",
+			"namespace": "industrial-edge-tst-all", "cluster": "east", "agent": "east-agent",
+			"proposedCPU": "250m", "proposedMemory": "512Mi",
+			"currentCPU": "100m", "currentMemory": "256Mi",
+			"reason": "CPU utilization averaging 92% over last 30 minutes; AI recommends scaling up to avoid throttling",
+			"status": "pending",
+		},
+		{
+			"id": "appr-002", "resource": "line-dashboard",
+			"namespace": "industrial-edge-tst-all", "cluster": "west", "agent": "west-agent",
+			"proposedCPU": "150m", "proposedMemory": "384Mi",
+			"currentCPU": "200m", "currentMemory": "512Mi",
+			"reason": "Resource over-provisioned: memory usage below 40% for 2 hours; AI recommends downsizing",
+			"status": "pending",
+		},
+		{
+			"id": "appr-003", "resource": "minio",
+			"namespace": "industrial-edge-ml-workspace", "cluster": "east", "agent": "east-agent",
+			"proposedCPU": "750m", "proposedMemory": "2Gi",
+			"currentCPU": "500m", "currentMemory": "1Gi",
+			"reason": "Storage I/O contention detected; scaling CPU and memory to match workload pattern",
+			"status": "pending",
+		},
+		{
+			"id": "appr-004", "resource": "machine-sensor-1",
+			"namespace": "industrial-edge-tst-all", "cluster": "west", "agent": "west-agent",
+			"proposedCPU": "100m", "proposedMemory": "256Mi",
+			"currentCPU": "50m", "currentMemory": "128Mi",
+			"reason": "Pod restarts detected (OOMKilled x2 in last hour); AI recommends doubling memory allocation",
+			"status": "pending",
+		},
+	},
 }
 
 type Hub struct {
@@ -155,6 +197,7 @@ func main() {
 	mux.HandleFunc("/api/v1/managed-resources", handleManagedResources)
 	mux.HandleFunc("/api/v1/user", handleUser)
 	mux.HandleFunc("/api/v1/approvals", handleApprovals)
+	mux.HandleFunc("/api/v1/approvals/", handleApprovalAction)
 	mux.HandleFunc("/api/v1/history", handleHistory)
 	mux.HandleFunc("/api/v1/notifications", handleNotifications)
 
@@ -579,61 +622,75 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 
 func handleApprovals(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	approvals := []map[string]interface{}{
-		{
-			"id":             "appr-001",
-			"resource":       "ie-anomaly-alerter",
-			"namespace":      "industrial-edge-tst-all",
-			"cluster":        "east",
-			"agent":          "east-agent",
-			"proposedCPU":    "250m",
-			"proposedMemory": "512Mi",
-			"currentCPU":     "100m",
-			"currentMemory":  "256Mi",
-			"reason":         "CPU utilization averaging 92% over last 30 minutes; AI recommends scaling up to avoid throttling",
-			"timestamp":      time.Now().Add(-8 * time.Minute),
-		},
-		{
-			"id":             "appr-002",
-			"resource":       "line-dashboard",
-			"namespace":      "industrial-edge-tst-all",
-			"cluster":        "west",
-			"agent":          "west-agent",
-			"proposedCPU":    "150m",
-			"proposedMemory": "384Mi",
-			"currentCPU":     "200m",
-			"currentMemory":  "512Mi",
-			"reason":         "Resource over-provisioned: memory usage below 40% for 2 hours; AI recommends downsizing",
-			"timestamp":      time.Now().Add(-3 * time.Minute),
-		},
-		{
-			"id":             "appr-003",
-			"resource":       "minio",
-			"namespace":      "industrial-edge-ml-workspace",
-			"cluster":        "east",
-			"agent":          "east-agent",
-			"proposedCPU":    "750m",
-			"proposedMemory": "2Gi",
-			"currentCPU":     "500m",
-			"currentMemory":  "1Gi",
-			"reason":         "Storage I/O contention detected; scaling CPU and memory to match workload pattern",
-			"timestamp":      time.Now().Add(-12 * time.Minute),
-		},
-		{
-			"id":             "appr-004",
-			"resource":       "machine-sensor-1",
-			"namespace":      "industrial-edge-tst-all",
-			"cluster":        "west",
-			"agent":          "west-agent",
-			"proposedCPU":    "100m",
-			"proposedMemory": "256Mi",
-			"currentCPU":     "50m",
-			"currentMemory":  "128Mi",
-			"reason":         "Pod restarts detected (OOMKilled x2 in last hour); AI recommends doubling memory allocation",
-			"timestamp":      time.Now().Add(-1 * time.Minute),
-		},
+
+	approvalStore.RLock()
+	pending := make([]map[string]interface{}, 0)
+	for _, a := range approvalStore.items {
+		if a["status"] == "pending" {
+			pending = append(pending, a)
+		}
 	}
-	json.NewEncoder(w).Encode(approvals)
+	approvalStore.RUnlock()
+
+	json.NewEncoder(w).Encode(pending)
+}
+
+func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse path: /api/v1/approvals/{id}/{action}
+	path := r.URL.Path
+	parts := splitPath(path)
+	// Expected: ["api","v1","approvals","{id}","{action}"]
+	if len(parts) < 5 {
+		http.Error(w, `{"error":"invalid path"}`, http.StatusBadRequest)
+		return
+	}
+
+	id := parts[3]
+	action := parts[4]
+
+	if r.Method != http.MethodPost {
+		http.Error(w, `{"error":"POST required"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	if action != "approve" && action != "reject" {
+		http.Error(w, `{"error":"action must be approve or reject"}`, http.StatusBadRequest)
+		return
+	}
+
+	approvalStore.Lock()
+	found := false
+	for i, a := range approvalStore.items {
+		if a["id"] == id {
+			found = true
+			if action == "approve" {
+				approvalStore.items[i]["status"] = "approved"
+			} else {
+				approvalStore.items[i]["status"] = "rejected"
+			}
+			break
+		}
+	}
+	approvalStore.Unlock()
+
+	if !found {
+		http.Error(w, `{"error":"approval not found"}`, http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"status": action + "d", "id": id})
+}
+
+func splitPath(path string) []string {
+	parts := make([]string, 0)
+	for _, p := range strings.Split(path, "/") {
+		if p != "" {
+			parts = append(parts, p)
+		}
+	}
+	return parts
 }
 
 func handleHistory(w http.ResponseWriter, r *http.Request) {

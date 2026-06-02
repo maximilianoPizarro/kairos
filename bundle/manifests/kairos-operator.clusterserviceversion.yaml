@@ -285,7 +285,7 @@ metadata:
       ]
     capabilities: Full Lifecycle
     categories: AI/Machine Learning, Monitoring
-    containerImage: quay.io/maximilianopizarro/kairos-operator:v2.0.1
+    containerImage: quay.io/maximilianopizarro/kairos-operator:v2.0.2
     createdAt: "2026-05-28T00:43:07Z"
     description: AI-powered Kubernetes resource optimizer with SSA, ArgoCD-safe, multi-cluster
       governance
@@ -294,7 +294,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/maximilianoPizarro/kairos
     support: maximilianopizarro
-  name: kairos-operator.v2.0.1
+  name: kairos-operator.v2.0.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -641,7 +641,7 @@ spec:
                 - --health-probe-bind-address=:8081
                 command:
                 - /manager
-                image: quay.io/maximilianopizarro/kairos-operator:v2.0.1
+                image: quay.io/maximilianopizarro/kairos-operator:v2.0.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -754,4 +754,4 @@ spec:
   provider:
     name: maximilianopizarro
     url: https://github.com/maximilianoPizarro
-  version: 2.0.1
+  version: 2.0.2

@@ -12,7 +12,7 @@ WORKDIR /opt/app-root/src
 COPY console/go.mod console/go.sum ./
 RUN go mod download
 COPY console/ .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o console-server main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o console-server .
 
 # Runtime
 FROM registry.access.redhat.com/ubi9/ubi-micro:latest

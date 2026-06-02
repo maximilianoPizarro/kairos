@@ -488,20 +488,31 @@ func handleAgentReport(w http.ResponseWriter, r *http.Request) {
 
 func handlePolicies(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	policies := []map[string]interface{}{
-		{
-			"name":               "demo-policy",
-			"namespace":          "kairos-system",
-			"cluster":            "hub",
-			"target":             "kairos-console",
-			"rules":              2,
-			"paused":             false,
-			"metricsSource":      "Thanos",
-			"prometheusEndpoint": "thanos-querier.openshift-monitoring.svc:9091",
-			"lastAction":         time.Now().Add(-5 * time.Minute),
-		},
+
+	if policies, err := listSmartScalingPoliciesFromCluster(); err == nil && len(policies) > 0 {
+		json.NewEncoder(w).Encode(policies)
+		return
 	}
-	json.NewEncoder(w).Encode(policies)
+
+	// Optional demo row for labs without SmartScalingPolicy CRs (set KAIROS_CONSOLE_DEMO_DATA=true).
+	if os.Getenv("KAIROS_CONSOLE_DEMO_DATA") == "true" {
+		json.NewEncoder(w).Encode([]map[string]interface{}{
+			{
+				"name":               "demo-policy",
+				"namespace":          "kairos-system",
+				"cluster":            clusterDisplayName(),
+				"target":             "kairos-console",
+				"rules":              2,
+				"paused":             false,
+				"metricsSource":      "Thanos",
+				"prometheusEndpoint": "thanos-querier.openshift-monitoring.svc:9091",
+				"lastAction":         time.Now().Add(-5 * time.Minute),
+			},
+		})
+		return
+	}
+
+	json.NewEncoder(w).Encode([]map[string]interface{}{})
 }
 
 func handleEvents(w http.ResponseWriter, r *http.Request) {

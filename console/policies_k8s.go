@@ -63,8 +63,10 @@ func listSmartScalingPoliciesFromCluster() ([]map[string]interface{}, error) {
 	var list struct {
 		Items []struct {
 			Metadata struct {
-				Name      string `json:"name"`
-				Namespace string `json:"namespace"`
+				Name        string            `json:"name"`
+				Namespace   string            `json:"namespace"`
+				Annotations map[string]string `json:"annotations"`
+				Labels      map[string]string `json:"labels"`
 			} `json:"metadata"`
 			Spec struct {
 				Paused bool `json:"paused"`
@@ -81,9 +83,19 @@ func listSmartScalingPoliciesFromCluster() ([]map[string]interface{}, error) {
 		return nil, err
 	}
 
-	cluster := clusterDisplayName()
 	out := make([]map[string]interface{}, 0, len(list.Items))
 	for _, item := range list.Items {
+		cluster := clusterDisplayName()
+		if item.Metadata.Annotations != nil {
+			if dc := item.Metadata.Annotations["kairos.io/display-cluster"]; dc != "" {
+				cluster = dc
+			}
+		}
+		if item.Metadata.Labels != nil {
+			if dc := item.Metadata.Labels["kairos.io/spoke"]; dc != "" {
+				cluster = dc
+			}
+		}
 		target := item.Spec.Target.Name
 		if target == "" {
 			target = "unknown"

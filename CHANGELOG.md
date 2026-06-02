@@ -2,6 +2,14 @@
 
 All notable changes to the Kairos Operator project are documented here.
 
+## [v2.0.2] - 2026-06-02
+
+### Console
+- List `SmartScalingPolicy` CRs from the in-cluster Kubernetes API instead of hardcoded `demo-policy`.
+- Return empty policies list on hub when no CRs exist; optional demo row via `KAIROS_CONSOLE_DEMO_DATA=true`.
+- Document hub-only console deployment and demo Approvals/History APIs.
+
+
 ## [v1.0.0] - 2026-05-27
 
 ### Initial Release

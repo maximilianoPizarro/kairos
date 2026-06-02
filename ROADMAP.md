@@ -1,6 +1,10 @@
 # Kairos Operator — Roadmap
 
-## Current: v2.0.1 (Released — Security Patch)
+## Current: v2.0.2 (Released — Console policies API)
+
+
+- [x] Console `GET /api/v1/policies` reads SmartScalingPolicy from cluster API
+- [x] Hub-only console URL documented; demo data opt-in
 
 - [x] CVE-2026-33186 (CRITICAL): google.golang.org/grpc → v1.81.1
 - [x] CVE-2026-24051 (HIGH): go.opentelemetry.io/otel/sdk → v1.44.0

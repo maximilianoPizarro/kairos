@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +30,19 @@ func clusterDisplayName() string {
 	return "local"
 }
 
+
+func inClusterHTTPClient() *http.Client {
+	const caPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if caPEM, err := os.ReadFile(caPath); err == nil {
+		pool := x509.NewCertPool()
+		if pool.AppendCertsFromPEM(caPEM) {
+			transport.TLSClientConfig = &tls.Config{RootCAs: pool}
+		}
+	}
+	return &http.Client{Timeout: 10 * time.Second, Transport: transport}
+}
+
 // listSmartScalingPoliciesFromCluster returns UI rows from SmartScalingPolicy CRs in kairos-system.
 func listSmartScalingPoliciesFromCluster() ([]map[string]interface{}, error) {
 	token := getServiceAccountToken()
@@ -36,10 +51,7 @@ func listSmartScalingPoliciesFromCluster() ([]map[string]interface{}, error) {
 	}
 
 	url := kubernetesAPIBase() + "/apis/kairos.maximilianopizarro.github.io/v1alpha1/namespaces/kairos-system/smartscalingpolicies"
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: http.DefaultTransport,
-	}
+	client := inClusterHTTPClient()
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

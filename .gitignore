@@ -27,3 +27,4 @@ go.work
 *.swo
 *~
 node_modules/
+console/frontend/dist/

@@ -62,6 +62,8 @@ spec:
                     type: string
                   memory:
                     type: string
+                  replicas:
+                    type: string
                 type: object
               agentName:
                 description: Name of the KairosAgent that generated this event
@@ -76,6 +78,8 @@ spec:
                     type: string
                   memory:
                     type: string
+                  replicas:
+                    type: string
                 type: object
               cluster:
                 description: Cluster where the event originated
@@ -86,11 +90,18 @@ spec:
               namespace:
                 description: Target resource namespace
                 type: string
+              policyName:
+                description: Name of the SmartScalingPolicy that generated this event
+                  (if applicable)
+                type: string
               reason:
                 description: Human-readable reason for the action
                 type: string
               resource:
                 description: Target resource name
+                type: string
+              status:
+                description: EventStatus indicates the lifecycle state of a KairosEvent.
                 type: string
             required:
             - action

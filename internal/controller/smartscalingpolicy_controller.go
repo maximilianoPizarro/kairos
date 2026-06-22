@@ -58,6 +58,7 @@ type SmartScalingPolicyReconciler struct {
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=smartscalingpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=smartscalingpolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=smartscalingpolicies/finalizers,verbs=update
+// +kubebuilder:rbac:groups=kairos.maximilianopizarro.github.io,resources=kairosevents,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;patch;update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;patch;update
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
@@ -142,6 +143,8 @@ func (r *SmartScalingPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	scaling := false
 	for _, actionPlan := range actions {
+		beforeSnapshot := captureSnapshot(workload)
+
 		if err := r.applyScalingAction(ctx, policy, workload, actionPlan); err != nil {
 			log.Error(err, "failed to apply scaling action", "rule", actionPlan.ruleName, "action", actionPlan.action.Type)
 			event := kairosv1alpha1.ScalingEvent{
@@ -159,6 +162,17 @@ func (r *SmartScalingPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			return ctrl.Result{RequeueAfter: errorRequeueInterval}, err
 		}
+
+		// Re-fetch workload to capture after state
+		afterWorkload, _, _ := r.loadManagedWorkload(ctx, policy, targetName)
+		var afterSnapshot kairosv1alpha1.ResourceSnapshot
+		if afterWorkload != nil {
+			afterSnapshot = captureSnapshot(afterWorkload)
+		} else {
+			afterSnapshot = beforeSnapshot
+		}
+
+		r.createKairosEvent(ctx, policy, beforeSnapshot, afterSnapshot, actionPlan)
 
 		scaling = true
 		detail := describeAction(actionPlan.action)
@@ -759,4 +773,49 @@ func setCondition(conditions *[]metav1.Condition, conditionType string, status m
 
 func (r *SmartScalingPolicyReconciler) updateStatus(ctx context.Context, policy *kairosv1alpha1.SmartScalingPolicy) error {
 	return r.Status().Update(ctx, policy)
+}
+
+func captureSnapshot(workload *workloadTarget) kairosv1alpha1.ResourceSnapshot {
+	snapshot := kairosv1alpha1.ResourceSnapshot{
+		Replicas: fmt.Sprintf("%d", workload.replicaCount()),
+	}
+	containers := workload.containers()
+	if len(containers) > 0 {
+		res := containers[0].Resources
+		if req, ok := res.Requests[corev1.ResourceCPU]; ok {
+			snapshot.CPU = req.String()
+		}
+		if req, ok := res.Requests[corev1.ResourceMemory]; ok {
+			snapshot.Memory = req.String()
+		}
+	}
+	return snapshot
+}
+
+func (r *SmartScalingPolicyReconciler) createKairosEvent(ctx context.Context, policy *kairosv1alpha1.SmartScalingPolicy, before, after kairosv1alpha1.ResourceSnapshot, action plannedAction) {
+	eventNS := policy.Spec.Target.Namespace
+	if eventNS == "" {
+		eventNS = policy.Namespace
+	}
+	event := &kairosv1alpha1.KairosEvent{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "kairos-policy-event-",
+			Namespace:    policy.Namespace,
+		},
+		Spec: kairosv1alpha1.KairosEventSpec{
+			PolicyName: policy.Name,
+			AgentName:  "",
+			Cluster:    "",
+			Action:     string(action.action.Type),
+			Resource:   policy.Spec.Target.Name,
+			Namespace:  eventNS,
+			Before:     before,
+			After:      after,
+			Reason:     fmt.Sprintf("Rule %q triggered", action.ruleName),
+			Status:     "applied",
+		},
+	}
+	if err := r.Create(ctx, event); err != nil {
+		logf.FromContext(ctx).Error(err, "Failed to create KairosEvent for policy action")
+	}
 }

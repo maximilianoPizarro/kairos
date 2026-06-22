@@ -16,7 +16,7 @@ FROM registry.access.redhat.com/ubi9/ubi-micro:latest
 
 LABEL name="kairos-operator" \
       vendor="maximilianopizarro" \
-      version="2.0.2" \
+      version="2.1.0" \
       summary="Kairos Operator - Smart resource scaling for OpenShift" \
       description="OpenShift operator for intelligent resource management with OTel metrics and optional AI-powered autopilot" \
       io.k8s.display-name="Kairos Operator" \

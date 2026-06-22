@@ -22,7 +22,7 @@ metadata:
           "metadata": {"name": "kairos", "namespace": "kairos-system"},
           "spec": {
             "replicas": 1,
-            "image": "quay.io/maximilianopizarro/kairos-console:v2.0.0",
+            "image": "quay.io/maximilianopizarro/kairos-console:v2.1.0",
             "route": {"enabled": true},
             "auth": {"type": "none"}
           }
@@ -60,7 +60,7 @@ metadata:
     categories: "AI/Machine Learning, Monitoring"
     description: "AI-powered Kubernetes resource optimizer with SSA, ArgoCD-safe, multi-cluster governance"
     repository: "https://github.com/maximilianoPizarro/kairos"
-    containerImage: "quay.io/maximilianopizarro/kairos-operator:v2.0.2"
+    containerImage: "quay.io/maximilianopizarro/kairos-operator:v2.1.0"
     createdAt: "2026-05-27T00:00:00Z"
     support: "maximilianopizarro"
     operatorframework.io/suggested-namespace: kairos-system
@@ -280,3 +280,9 @@ spec:
     - group: batch
       version: v1
       kind: CronJob
+    - group: autoscaling
+      version: v2
+      kind: HorizontalPodAutoscaler
+    - group: route.openshift.io
+      version: v1
+      kind: Route

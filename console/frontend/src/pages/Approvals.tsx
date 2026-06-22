@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   CardBody,
+  ExpandableSection,
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 
@@ -14,9 +15,14 @@ interface ApprovalRequest {
   namespace: string;
   cluster: string;
   agent: string;
-  proposedChange: string;
   reason: string;
+  status: string;
+  action: string;
   timestamp: string;
+  before: Record<string, string> | null;
+  after: Record<string, string> | null;
+  dryRun: boolean;
+  policyName: string;
 }
 
 export const Approvals: React.FC = () => {
@@ -39,6 +45,11 @@ export const Approvals: React.FC = () => {
       .catch(console.error);
   };
 
+  const formatSnapshot = (snapshot: Record<string, string> | null): string => {
+    if (!snapshot || Object.keys(snapshot).length === 0) return '-';
+    return Object.entries(snapshot).map(([k, v]) => `${k}: ${v}`).join(', ');
+  };
+
   return (
     <>
       <Title headingLevel="h1" size="2xl" style={{ marginBottom: '1rem' }}>
@@ -57,9 +68,9 @@ export const Approvals: React.FC = () => {
                 <Th>Namespace</Th>
                 <Th>Cluster</Th>
                 <Th>Agent</Th>
-                <Th>Proposed Change</Th>
+                <Th>Action</Th>
+                <Th>Before / After</Th>
                 <Th>Reason</Th>
-                <Th>Timestamp</Th>
                 <Th>Actions</Th>
               </Tr>
             </Thead>
@@ -77,9 +88,20 @@ export const Approvals: React.FC = () => {
                     <Td>{req.namespace}</Td>
                     <Td><Label color="blue">{req.cluster}</Label></Td>
                     <Td><Label color="purple">{req.agent}</Label></Td>
-                    <Td><code>{req.proposedChange}</code></Td>
-                    <Td>{req.reason}</Td>
-                    <Td>{new Date(req.timestamp).toLocaleString()}</Td>
+                    <Td><Label color="orange">{req.action}</Label></Td>
+                    <Td>
+                      <ExpandableSection toggleText="View changes" isIndented>
+                        <div style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                          <div style={{ padding: '0.25rem 0.5rem', background: 'rgba(248, 81, 73, 0.1)', borderLeft: '3px solid #f85149', marginBottom: '4px' }}>
+                            <strong style={{ color: '#f85149' }}>Before:</strong> {formatSnapshot(req.before)}
+                          </div>
+                          <div style={{ padding: '0.25rem 0.5rem', background: 'rgba(63, 185, 80, 0.1)', borderLeft: '3px solid #3fb950' }}>
+                            <strong style={{ color: '#3fb950' }}>After:</strong> {formatSnapshot(req.after)}
+                          </div>
+                        </div>
+                      </ExpandableSection>
+                    </Td>
+                    <Td style={{ maxWidth: '300px' }}>{req.reason}</Td>
                     <Td>
                       <Button
                         variant="primary"

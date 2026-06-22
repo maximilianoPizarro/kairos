@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Title,
   Label,
@@ -12,12 +12,14 @@ interface HistoryEntry {
   agent: string;
   resource: string;
   namespace: string;
+  cluster: string;
   action: string;
   beforeCPU: string;
   beforeMemory: string;
   afterCPU: string;
   afterMemory: string;
   status: string;
+  aiResponse: string;
 }
 
 export const History: React.FC = () => {
@@ -25,12 +27,19 @@ export const History: React.FC = () => {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
 
-  useEffect(() => {
-    fetch('/api/v1/history')
+  const fetchHistory = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('limit', perPage.toString());
+    params.set('offset', ((page - 1) * perPage).toString());
+    fetch(`/api/v1/history?${params.toString()}`)
       .then(r => r.json())
       .then(data => setEntries(data || []))
       .catch(() => setEntries([]));
-  }, []);
+  }, [page, perPage]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   const statusColor = (status: string): 'green' | 'blue' | 'red' | 'grey' => {
     switch (status) {
@@ -40,9 +49,6 @@ export const History: React.FC = () => {
       default: return 'grey';
     }
   };
-
-  const startIdx = (page - 1) * perPage;
-  const paginatedEntries = entries.slice(startIdx, startIdx + perPage);
 
   return (
     <>
@@ -54,7 +60,7 @@ export const History: React.FC = () => {
       </p>
 
       <Pagination
-        itemCount={entries.length}
+        itemCount={entries.length < perPage ? (page - 1) * perPage + entries.length : page * perPage + 1}
         perPage={perPage}
         page={page}
         onSetPage={(_e, p) => setPage(p)}
@@ -69,6 +75,7 @@ export const History: React.FC = () => {
             <Th>Agent</Th>
             <Th>Resource</Th>
             <Th>Namespace</Th>
+            <Th>Cluster</Th>
             <Th>Action</Th>
             <Th>Before (CPU / Mem)</Th>
             <Th>After (CPU / Mem)</Th>
@@ -76,27 +83,28 @@ export const History: React.FC = () => {
           </Tr>
         </Thead>
         <Tbody>
-          {paginatedEntries.length === 0 ? (
+          {entries.length === 0 ? (
             <Tr>
-              <Td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+              <Td colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
                 No history entries found.
               </Td>
             </Tr>
           ) : (
-            paginatedEntries.map((entry, idx) => (
+            entries.map((entry, idx) => (
               <Tr key={`${entry.timestamp}-${entry.resource}-${idx}`}>
                 <Td>{new Date(entry.timestamp).toLocaleString()}</Td>
                 <Td><Label color="purple">{entry.agent}</Label></Td>
                 <Td>{entry.resource}</Td>
                 <Td>{entry.namespace}</Td>
+                <Td><Label color="cyan">{entry.cluster}</Label></Td>
                 <Td>
                   <Badge>{entry.action}</Badge>
                 </Td>
                 <Td>
-                  <code>{entry.beforeCPU}</code> / <code>{entry.beforeMemory}</code>
+                  <code>{entry.beforeCPU || '-'}</code> / <code>{entry.beforeMemory || '-'}</code>
                 </Td>
                 <Td>
-                  <code>{entry.afterCPU}</code> / <code>{entry.afterMemory}</code>
+                  <code>{entry.afterCPU || '-'}</code> / <code>{entry.afterMemory || '-'}</code>
                 </Td>
                 <Td>
                   <Label color={statusColor(entry.status)}>{entry.status}</Label>
@@ -107,9 +115,9 @@ export const History: React.FC = () => {
         </Tbody>
       </Table>
 
-      {entries.length > perPage && (
+      {entries.length >= perPage && (
         <Pagination
-          itemCount={entries.length}
+          itemCount={page * perPage + 1}
           perPage={perPage}
           page={page}
           onSetPage={(_e, p) => setPage(p)}

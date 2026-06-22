@@ -22,8 +22,9 @@ import (
 
 // ResourceSnapshot captures resource values at a point in time.
 type ResourceSnapshot struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
+	CPU      string `json:"cpu,omitempty"`
+	Memory   string `json:"memory,omitempty"`
+	Replicas string `json:"replicas,omitempty"`
 }
 
 // KairosEventSpec defines the desired state of KairosEvent.
@@ -53,6 +54,12 @@ type KairosEventSpec struct {
 	// Whether this was a dry-run (no actual changes applied)
 	// +optional
 	DryRun bool `json:"dryRun,omitempty"`
+	// EventStatus indicates the lifecycle state of a KairosEvent.
+	// +optional
+	Status string `json:"status,omitempty"`
+	// Name of the SmartScalingPolicy that generated this event (if applicable)
+	// +optional
+	PolicyName string `json:"policyName,omitempty"`
 }
 
 // +kubebuilder:object:root=true

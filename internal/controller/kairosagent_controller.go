@@ -358,6 +358,7 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 			Reason:         recommendation.Reason,
 			AIResponse:     fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 		})
+		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, "", "", "dry-run")
 		return record
 	}
 
@@ -374,6 +375,7 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 			Reason:     recommendation.Reason,
 			AIResponse: fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 		})
+		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, "", "", "pending-approval")
 		return record
 	}
 
@@ -383,10 +385,46 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 		"action", recommendation.Action,
 		"reason", recommendation.Reason,
 	)
-	record.Applied = true
 
-	// Create KairosEvent for audit trail
-	r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory)
+	patch := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploy.Name,
+			Namespace: deploy.Namespace,
+		},
+	}
+	patch.Spec.Template.Spec.Containers = []corev1.Container{
+		{
+			Name:      deploy.Spec.Template.Spec.Containers[0].Name,
+			Resources: deploy.Spec.Template.Spec.Containers[0].Resources,
+		},
+	}
+	if err := r.Patch(ctx, patch, client.Apply, client.FieldOwner("kairos-agent"), client.ForceOwnership); err != nil {
+		log.Error(err, "Failed to apply SSA patch", "deployment", deploy.Name)
+		record.Applied = false
+		return record
+	}
+
+	// Re-read deployment to get after state
+	updatedDeploy := &appsv1.Deployment{}
+	var afterCPU, afterMemory string
+	if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, updatedDeploy); err == nil {
+		if len(updatedDeploy.Spec.Template.Spec.Containers) > 0 {
+			res := updatedDeploy.Spec.Template.Spec.Containers[0].Resources
+			if req, ok := res.Requests[corev1.ResourceCPU]; ok {
+				afterCPU = req.String()
+			}
+			if req, ok := res.Requests[corev1.ResourceMemory]; ok {
+				afterMemory = req.String()
+			}
+		}
+	}
+
+	record.Applied = true
+	r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, afterCPU, afterMemory, "applied")
 
 	return record
 }
@@ -430,7 +468,7 @@ func (r *KairosAgentReconciler) detectConflictingController(ctx context.Context,
 }
 
 // createEvent creates a KairosEvent for audit trail.
-func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1alpha1.KairosAgent, resourceName, namespace string, rec *ai.ScalingRecommendation, currentCPU, currentMemory string) {
+func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1alpha1.KairosAgent, resourceName, namespace string, rec *ai.ScalingRecommendation, currentCPU, currentMemory, afterCPU, afterMemory, status string) {
 	event := &kairosv1alpha1.KairosEvent{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kairos-event-",
@@ -446,9 +484,14 @@ func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1
 				CPU:    currentCPU,
 				Memory: currentMemory,
 			},
+			After: kairosv1alpha1.ResourceSnapshot{
+				CPU:    afterCPU,
+				Memory: afterMemory,
+			},
 			Reason:     rec.Reason,
 			AIResponse: fmt.Sprintf("confidence=%.2f, action=%s", rec.Confidence, rec.Action),
 			DryRun:     agent.Spec.CorrectionPolicy.DryRun,
+			Status:     status,
 		},
 	}
 	if err := r.Create(ctx, event); err != nil {

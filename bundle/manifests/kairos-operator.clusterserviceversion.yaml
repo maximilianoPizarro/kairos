@@ -755,9 +755,6 @@ spec:
   - group: autoscaling
     kind: HorizontalPodAutoscaler
     version: v2
-  - group: route.openshift.io
-    kind: Route
-    version: v1
   provider:
     name: maximilianopizarro
     url: https://github.com/maximilianoPizarro

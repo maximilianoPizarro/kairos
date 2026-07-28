@@ -315,17 +315,6 @@ func (w *workloadTarget) containers() []corev1.Container {
 	}
 }
 
-func (w *workloadTarget) namespacedName() types.NamespacedName {
-	switch w.kind {
-	case kindDeployment:
-		return types.NamespacedName{Namespace: w.deployment.Namespace, Name: w.deployment.Name}
-	case kindStatefulSet:
-		return types.NamespacedName{Namespace: w.statefulSet.Namespace, Name: w.statefulSet.Name}
-	default:
-		return types.NamespacedName{}
-	}
-}
-
 func (r *SmartScalingPolicyReconciler) evaluateRules(
 	ctx context.Context,
 	policy *kairosv1alpha1.SmartScalingPolicy,

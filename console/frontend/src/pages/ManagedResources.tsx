@@ -15,6 +15,7 @@ import {
 } from '@patternfly/react-core';
 import { CubesIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
+import { safeFetch } from '../utils/api';
 
 interface ManagedResource {
   name: string;
@@ -35,8 +36,8 @@ export const ManagedResources: React.FC = () => {
   const [clusterFilter, setClusterFilter] = useState<string>('all');
 
   useEffect(() => {
-    fetch('/api/v1/managed-resources').then(r => r.json()).then(data => {
-      setResources(data || []);
+    safeFetch<ManagedResource[]>('/api/v1/managed-resources').then(d => {
+      setResources(d || []);
     });
   }, []);
 

@@ -18,6 +18,7 @@ import {
   CodeBlock,
   CodeBlockCode,
 } from '@patternfly/react-core';
+import { safeFetch } from '../utils/api';
 
 interface ThanosInfo {
   status: string;
@@ -58,15 +59,13 @@ export const Observability: React.FC = () => {
   const [metricsQuery, setMetricsQuery] = useState('up{job="kubelet"}');
 
   useEffect(() => {
-    fetch('/api/v1/observability')
-      .then(r => r.json())
-      .then(setData)
+    safeFetch<ObservabilityData>('/api/v1/observability')
+      .then(d => { if (d) setData(d); })
       .finally(() => setLoading(false));
 
-    fetch('/api/v1/metrics/query?query=up%7Bjob%3D%22kubelet%22%7D')
-      .then(r => r.json())
+    safeFetch<{ data?: { result?: MetricResult[] } }>('/api/v1/metrics/query?query=up%7Bjob%3D%22kubelet%22%7D')
       .then(d => {
-        if (d.data && d.data.result) {
+        if (d?.data?.result) {
           setMetrics(d.data.result.slice(0, 10));
         }
       });

@@ -479,7 +479,14 @@ func queryThanos(query string) ([]byte, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("upstream returned %d: %s", resp.StatusCode, string(body))
+	}
+	return body, nil
 }
 
 func handleObservability(w http.ResponseWriter, r *http.Request) {
@@ -553,9 +560,21 @@ func handleMetricsQuery(w http.ResponseWriter, r *http.Request) {
 
 	data, err := queryThanos(query)
 	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "error",
 			"error":  err.Error(),
+		})
+		return
+	}
+
+	var parsed interface{}
+	if json.Unmarshal(data, &parsed) != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "error",
+			"error":  "upstream returned non-JSON response",
+			"detail": string(data),
 		})
 		return
 	}
@@ -1384,7 +1403,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := map[string]interface{}{
-		"operatorVersion": "2.1.0",
+		"operatorVersion": "2.1.1",
 		"totalAgents":     totalAgents,
 		"totalPolicies":   totalPolicies,
 		"totalEvents":     totalEvents,

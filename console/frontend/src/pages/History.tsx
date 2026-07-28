@@ -6,6 +6,7 @@ import {
   Badge,
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
+import { safeFetch } from '../utils/api';
 
 interface HistoryEntry {
   timestamp: string;
@@ -31,10 +32,8 @@ export const History: React.FC = () => {
     const params = new URLSearchParams();
     params.set('limit', perPage.toString());
     params.set('offset', ((page - 1) * perPage).toString());
-    fetch(`/api/v1/history?${params.toString()}`)
-      .then(r => r.json())
-      .then(data => setEntries(data || []))
-      .catch(() => setEntries([]));
+    safeFetch<HistoryEntry[]>(`/api/v1/history?${params.toString()}`)
+      .then(d => setEntries(d || []));
   }, [page, perPage]);
 
   useEffect(() => {

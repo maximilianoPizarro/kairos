@@ -32,6 +32,7 @@ import { ManagedResources } from './pages/ManagedResources';
 import { Approvals } from './pages/Approvals';
 import { History } from './pages/History';
 import { DiffView } from './pages/DiffView';
+import { safeFetch } from './utils/api';
 
 type PageKey = 'dashboard' | 'agents' | 'policies' | 'events' | 'observability' | 'resources' | 'approvals' | 'history' | 'diffview';
 
@@ -46,10 +47,8 @@ export const App: React.FC = () => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/v1/user')
-      .then(r => r.json())
-      .then((data: UserInfo) => setUserInfo(data))
-      .catch(() => setUserInfo({ username: 'anonymous', authenticated: false }));
+    safeFetch<UserInfo>('/api/v1/user')
+      .then(d => setUserInfo(d || { username: 'anonymous', authenticated: false }));
   }, []);
 
   const handleLogout = () => {
@@ -122,7 +121,7 @@ export const App: React.FC = () => {
           <ToolbarContent>
             <ToolbarGroup align={{ default: 'alignLeft' }}>
               <ToolbarItem>
-                <Label color="green">Operator v2.1.0</Label>
+                <Label color="green">Operator v2.1.1</Label>
               </ToolbarItem>
               <ToolbarItem>
                 <Label color="blue">3 Clusters</Label>

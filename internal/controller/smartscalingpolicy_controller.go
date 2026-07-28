@@ -625,46 +625,17 @@ func scaleQuantity(current resource.Quantity, percent int32, minBound, maxBound 
 }
 
 func (r *SmartScalingPolicyReconciler) applyReplicaCount(ctx context.Context, workload *workloadTarget, replicas int32) error {
-	name := workload.namespacedName().Name
-	namespace := workload.namespacedName().Namespace
-
 	switch workload.kind {
 	case kindDeployment:
-		dep := &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       kindDeployment,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: &replicas,
-			},
-		}
-		return r.Patch(ctx, dep, client.Apply,
-			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
-			client.ForceOwnership,
-		)
+		dep := workload.deployment.DeepCopy()
+		patch := client.MergeFrom(dep.DeepCopy())
+		dep.Spec.Replicas = &replicas
+		return r.Patch(ctx, dep, patch)
 	case kindStatefulSet:
-		sts := &appsv1.StatefulSet{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       kindStatefulSet,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Replicas: &replicas,
-			},
-		}
-		return r.Patch(ctx, sts, client.Apply,
-			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
-			client.ForceOwnership,
-		)
+		sts := workload.statefulSet.DeepCopy()
+		patch := client.MergeFrom(sts.DeepCopy())
+		sts.Spec.Replicas = &replicas
+		return r.Patch(ctx, sts, patch)
 	default:
 		return fmt.Errorf("unsupported workload kind %q", workload.kind)
 	}
@@ -675,60 +646,25 @@ func (r *SmartScalingPolicyReconciler) applyContainerResources(
 	workload *workloadTarget,
 	containers []corev1.Container,
 ) error {
-	name := workload.namespacedName().Name
-	namespace := workload.namespacedName().Namespace
-
-	containerSpecs := make([]corev1.Container, len(containers))
-	for i, container := range containers {
-		containerSpecs[i] = corev1.Container{
-			Name:      container.Name,
-			Resources: container.Resources,
-		}
-	}
-
-	podTemplate := corev1.PodTemplateSpec{
-		Spec: corev1.PodSpec{
-			Containers: containerSpecs,
-		},
-	}
-
 	switch workload.kind {
 	case kindDeployment:
-		dep := &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       kindDeployment,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Template: podTemplate,
-			},
+		dep := workload.deployment.DeepCopy()
+		patch := client.MergeFrom(dep.DeepCopy())
+		for i, updated := range containers {
+			if i < len(dep.Spec.Template.Spec.Containers) {
+				dep.Spec.Template.Spec.Containers[i].Resources = updated.Resources
+			}
 		}
-		return r.Patch(ctx, dep, client.Apply,
-			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
-			client.ForceOwnership,
-		)
+		return r.Patch(ctx, dep, patch)
 	case kindStatefulSet:
-		sts := &appsv1.StatefulSet{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       kindStatefulSet,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Spec: appsv1.StatefulSetSpec{
-				Template: podTemplate,
-			},
+		sts := workload.statefulSet.DeepCopy()
+		patch := client.MergeFrom(sts.DeepCopy())
+		for i, updated := range containers {
+			if i < len(sts.Spec.Template.Spec.Containers) {
+				sts.Spec.Template.Spec.Containers[i].Resources = updated.Resources
+			}
 		}
-		return r.Patch(ctx, sts, client.Apply,
-			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
-			client.ForceOwnership,
-		)
+		return r.Patch(ctx, sts, patch)
 	default:
 		return fmt.Errorf("unsupported workload kind %q", workload.kind)
 	}

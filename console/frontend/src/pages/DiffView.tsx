@@ -18,6 +18,7 @@ import {
   EmptyStateIcon,
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
+import { safeFetch } from '../utils/api';
 
 interface DiffEvent {
   id: string;
@@ -47,10 +48,8 @@ export const DiffView: React.FC = () => {
     if (clusterFilter) params.set('cluster', clusterFilter);
     if (namespaceFilter) params.set('namespace', namespaceFilter);
     const qs = params.toString();
-    fetch(`/api/v1/diffs${qs ? '?' + qs : ''}`)
-      .then(r => r.json())
-      .then(data => setEvents(data || []))
-      .catch(() => setEvents([]));
+    safeFetch<DiffEvent[]>(`/api/v1/diffs${qs ? '?' + qs : ''}`)
+      .then(d => setEvents(d || []));
   };
 
   useEffect(() => {

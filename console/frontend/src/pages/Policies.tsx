@@ -10,6 +10,7 @@ import {
   DescriptionListTerm,
   DescriptionListDescription,
 } from '@patternfly/react-core';
+import { safeFetch } from '../utils/api';
 
 interface PolicyInfo {
   name: string;
@@ -24,7 +25,7 @@ export const Policies: React.FC = () => {
   const [policies, setPolicies] = useState<PolicyInfo[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/policies').then(r => r.json()).then(setPolicies);
+    safeFetch<PolicyInfo[]>('/api/v1/policies').then(d => setPolicies(d || []));
   }, []);
 
   return (

@@ -5,6 +5,7 @@ import {
   Pagination,
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
+import { safeFetch } from '../utils/api';
 
 interface EventInfo {
   timestamp: string;
@@ -22,7 +23,7 @@ export const Events: React.FC = () => {
   const [perPage, setPerPage] = useState(10);
 
   useEffect(() => {
-    fetch('/api/v1/events').then(r => r.json()).then(setEvents);
+    safeFetch<EventInfo[]>('/api/v1/events').then(d => setEvents(d || []));
   }, []);
 
   const actionColor = (action: string) => {

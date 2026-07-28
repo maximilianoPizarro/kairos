@@ -8,6 +8,7 @@ import {
   ExpandableSection,
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
+import { safeFetch } from '../utils/api';
 
 interface ApprovalRequest {
   id: string;
@@ -29,10 +30,8 @@ export const Approvals: React.FC = () => {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
 
   const fetchApprovals = () => {
-    fetch('/api/v1/approvals')
-      .then(r => r.json())
-      .then(data => setApprovals(data || []))
-      .catch(() => setApprovals([]));
+    safeFetch<ApprovalRequest[]>('/api/v1/approvals')
+      .then(d => setApprovals(d || []));
   };
 
   useEffect(() => {

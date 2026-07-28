@@ -10,6 +10,7 @@ import {
   DescriptionListTerm,
   DescriptionListDescription,
 } from '@patternfly/react-core';
+import { safeFetch } from '../utils/api';
 
 interface AgentInfo {
   name: string;
@@ -27,7 +28,7 @@ export const Agents: React.FC = () => {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/agents').then(r => r.json()).then(setAgents);
+    safeFetch<AgentInfo[]>('/api/v1/agents').then(d => setAgents(d || []));
   }, []);
 
   const phaseColor = (phase: string) => {

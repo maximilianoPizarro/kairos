@@ -23,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -59,6 +60,7 @@ type KairosConsoleReconciler struct {
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;update;patch;delete
 
 func (r *KairosConsoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
@@ -88,6 +90,12 @@ func (r *KairosConsoleReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Reconcile ServiceAccount
 	if err := r.reconcileServiceAccount(ctx, console); err != nil {
 		log.Error(err, "Failed to reconcile ServiceAccount")
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
+	}
+
+	// Reconcile RBAC for console SA
+	if err := r.reconcileConsoleRBAC(ctx, console); err != nil {
+		log.Error(err, "Failed to reconcile Console RBAC")
 		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 	}
 
@@ -585,6 +593,147 @@ func (r *KairosConsoleReconciler) ensureOAuthCookieSecret(ctx context.Context, c
 		}
 		return err
 	}
+	return nil
+}
+
+func (r *KairosConsoleReconciler) reconcileConsoleRBAC(ctx context.Context, console *kairosv1alpha1.KairosConsole) error {
+	saName := consoleName(console)
+	crName := "kairos-console-reader"
+	crbName := "kairos-console-reader"
+	monCrbName := "kairos-console-monitoring"
+
+	// ClusterRole with read access to Kairos CRs + apps workloads
+	cr := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crName,
+			Labels: map[string]string{
+				kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
+				kairosv1alpha1.LabelComponent: "console",
+			},
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"kairos.maximilianopizarro.github.io"},
+				Resources: []string{
+					"smartscalingpolicies", "smartscalingpolicies/status",
+					"kairosagents", "kairosagents/status",
+					"kairosevents", "kairosevents/status",
+					"kairosconsoles", "kairosconsoles/status",
+				},
+				Verbs: []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"deployments", "deployments/status", "statefulsets", "statefulsets/status"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"namespaces", "pods", "pods/status"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+	}
+
+	existingCR := &rbacv1.ClusterRole{}
+	if err := r.Get(ctx, types.NamespacedName{Name: crName}, existingCR); err != nil {
+		if errors.IsNotFound(err) {
+			if err := r.Create(ctx, cr); err != nil {
+				return fmt.Errorf("creating ClusterRole %s: %w", crName, err)
+			}
+		} else {
+			return err
+		}
+	} else {
+		existingCR.Rules = cr.Rules
+		existingCR.Labels = cr.Labels
+		if err := r.Update(ctx, existingCR); err != nil {
+			return fmt.Errorf("updating ClusterRole %s: %w", crName, err)
+		}
+	}
+
+	// ClusterRoleBinding for the reader role
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crbName,
+			Labels: map[string]string{
+				kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
+				kairosv1alpha1.LabelComponent: "console",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     crName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      saName,
+				Namespace: console.Namespace,
+			},
+		},
+	}
+
+	existingCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.Get(ctx, types.NamespacedName{Name: crbName}, existingCRB); err != nil {
+		if errors.IsNotFound(err) {
+			if err := r.Create(ctx, crb); err != nil {
+				return fmt.Errorf("creating ClusterRoleBinding %s: %w", crbName, err)
+			}
+		} else {
+			return err
+		}
+	} else {
+		existingCRB.Subjects = crb.Subjects
+		existingCRB.RoleRef = crb.RoleRef
+		existingCRB.Labels = crb.Labels
+		if err := r.Update(ctx, existingCRB); err != nil {
+			return fmt.Errorf("updating ClusterRoleBinding %s: %w", crbName, err)
+		}
+	}
+
+	// ClusterRoleBinding for cluster-monitoring-view (Thanos access)
+	monCrb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: monCrbName,
+			Labels: map[string]string{
+				kairosv1alpha1.LabelManagedBy: kairosv1alpha1.LabelManagedByValue,
+				kairosv1alpha1.LabelComponent: "console",
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "cluster-monitoring-view",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      saName,
+				Namespace: console.Namespace,
+			},
+		},
+	}
+
+	existingMonCRB := &rbacv1.ClusterRoleBinding{}
+	if err := r.Get(ctx, types.NamespacedName{Name: monCrbName}, existingMonCRB); err != nil {
+		if errors.IsNotFound(err) {
+			if err := r.Create(ctx, monCrb); err != nil {
+				return fmt.Errorf("creating ClusterRoleBinding %s: %w", monCrbName, err)
+			}
+		} else {
+			return err
+		}
+	} else {
+		existingMonCRB.Subjects = monCrb.Subjects
+		existingMonCRB.RoleRef = monCrb.RoleRef
+		existingMonCRB.Labels = monCrb.Labels
+		if err := r.Update(ctx, existingMonCRB); err != nil {
+			return fmt.Errorf("updating ClusterRoleBinding %s: %w", monCrbName, err)
+		}
+	}
+
 	return nil
 }
 

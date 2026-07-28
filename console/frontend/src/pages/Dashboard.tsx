@@ -14,6 +14,7 @@ import {
   Flex,
   FlexItem,
 } from '@patternfly/react-core';
+import { safeFetch } from '../utils/api';
 
 interface ClusterInfo {
   name: string;
@@ -36,8 +37,8 @@ export const Dashboard: React.FC = () => {
   const [status, setStatus] = useState<StatusInfo | null>(null);
 
   useEffect(() => {
-    fetch('/api/v1/clusters').then(r => r.json()).then(setClusters);
-    fetch('/api/v1/status').then(r => r.json()).then(setStatus);
+    safeFetch<ClusterInfo[]>('/api/v1/clusters').then(d => setClusters(d || []));
+    safeFetch<StatusInfo>('/api/v1/status').then(d => setStatus(d));
   }, []);
 
   return (

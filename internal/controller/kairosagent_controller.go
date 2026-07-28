@@ -386,24 +386,11 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 		"reason", recommendation.Reason,
 	)
 
-	patch := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      deploy.Name,
-			Namespace: deploy.Namespace,
-		},
-	}
-	patch.Spec.Template.Spec.Containers = []corev1.Container{
-		{
-			Name:      deploy.Spec.Template.Spec.Containers[0].Name,
-			Resources: deploy.Spec.Template.Spec.Containers[0].Resources,
-		},
-	}
-	if err := r.Patch(ctx, patch, client.Apply, client.FieldOwner("kairos-agent"), client.ForceOwnership); err != nil {
-		log.Error(err, "Failed to apply SSA patch", "deployment", deploy.Name)
+	depCopy := deploy.DeepCopy()
+	mergePatch := client.MergeFrom(depCopy.DeepCopy())
+	depCopy.Spec.Template.Spec.Containers[0].Resources = deploy.Spec.Template.Spec.Containers[0].Resources
+	if err := r.Patch(ctx, depCopy, mergePatch); err != nil {
+		log.Error(err, "Failed to apply merge patch", "deployment", deploy.Name)
 		record.Applied = false
 		return record
 	}

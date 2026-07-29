@@ -14,6 +14,13 @@ import {
   Flex,
   FlexItem,
 } from '@patternfly/react-core';
+import {
+  ChartDonut,
+  ChartArea,
+  ChartGroup,
+  ChartVoronoiContainer,
+  ChartThemeColor,
+} from '@patternfly/react-charts';
 import { safeFetch } from '../utils/api';
 
 interface ClusterInfo {
@@ -32,14 +39,56 @@ interface StatusInfo {
   uptime: string;
 }
 
+interface ResourceItem {
+  name: string;
+  value: number;
+}
+
+interface TrendItem {
+  date: string;
+  count: number;
+}
+
+interface ScalingItem {
+  date: string;
+  applied: number;
+  skipped: number;
+}
+
+interface StatsInfo {
+  resourceDistribution: ResourceItem[];
+  eventsTrend: TrendItem[];
+  scalingActions: ScalingItem[];
+}
+
 export const Dashboard: React.FC = () => {
   const [clusters, setClusters] = useState<ClusterInfo[]>([]);
   const [status, setStatus] = useState<StatusInfo | null>(null);
+  const [stats, setStats] = useState<StatsInfo | null>(null);
 
   useEffect(() => {
     safeFetch<ClusterInfo[]>('/api/v1/clusters').then(d => setClusters(d || []));
     safeFetch<StatusInfo>('/api/v1/status').then(d => setStatus(d));
+    safeFetch<StatsInfo>('/api/v1/stats').then(d => setStats(d));
   }, []);
+
+  const donutData = stats?.resourceDistribution.map(r => ({ x: r.name, y: r.value })) || [];
+  const donutTotal = donutData.reduce((sum, d) => sum + d.y, 0);
+
+  const areaData = stats?.eventsTrend.map(t => ({
+    x: t.date.slice(5),
+    y: t.count,
+  })) || [];
+
+  const appliedData = stats?.scalingActions.map(s => ({
+    x: s.date.slice(5),
+    y: s.applied,
+  })) || [];
+
+  const skippedData = stats?.scalingActions.map(s => ({
+    x: s.date.slice(5),
+    y: s.skipped,
+  })) || [];
 
   return (
     <>
@@ -87,6 +136,72 @@ export const Dashboard: React.FC = () => {
             </Flex>
           </CardBody>
         </Card>
+      )}
+
+      {stats && (
+        <Grid hasGutter style={{ marginBottom: '1rem' }}>
+          <GridItem span={4}>
+            <Card>
+              <CardTitle>Resource Distribution</CardTitle>
+              <CardBody>
+                <div style={{ height: '230px', width: '100%' }}>
+                  <ChartDonut
+                    data={donutData}
+                    title={`${donutTotal}`}
+                    subTitle="Total Resources"
+                    constrainToVisibleArea
+                    labels={({ datum }) => `${datum.x}: ${datum.y}`}
+                    legendData={stats.resourceDistribution.map(r => ({ name: `${r.name}: ${r.value}` }))}
+                    legendOrientation="vertical"
+                    legendPosition="right"
+                    padding={{ bottom: 20, left: 20, right: 140, top: 20 }}
+                    width={350}
+                    height={230}
+                    themeColor={ChartThemeColor.multiOrdered}
+                  />
+                </div>
+              </CardBody>
+            </Card>
+          </GridItem>
+          <GridItem span={8}>
+            <Card>
+              <CardTitle>Scaling Events (Last 7 Days)</CardTitle>
+              <CardBody>
+                <div style={{ height: '230px', width: '100%' }}>
+                  <ChartGroup
+                    containerComponent={
+                      <ChartVoronoiContainer
+                        labels={({ datum }) => `${datum.x}: ${datum.y}`}
+                        constrainToVisibleArea
+                      />
+                    }
+                    height={230}
+                    padding={{ bottom: 40, left: 50, right: 20, top: 20 }}
+                  >
+                    <ChartArea
+                      data={appliedData}
+                      interpolation="monotoneX"
+                      name="Applied"
+                      style={{ data: { fill: '#06c', fillOpacity: 0.3, stroke: '#06c' } }}
+                    />
+                    <ChartArea
+                      data={skippedData}
+                      interpolation="monotoneX"
+                      name="Skipped"
+                      style={{ data: { fill: '#f0ab00', fillOpacity: 0.3, stroke: '#f0ab00' } }}
+                    />
+                    <ChartArea
+                      data={areaData}
+                      interpolation="monotoneX"
+                      name="Total Events"
+                      style={{ data: { fill: '#009596', fillOpacity: 0.2, stroke: '#009596' } }}
+                    />
+                  </ChartGroup>
+                </div>
+              </CardBody>
+            </Card>
+          </GridItem>
+        </Grid>
       )}
 
       <Title headingLevel="h2" size="xl" style={{ marginBottom: '1rem' }}>

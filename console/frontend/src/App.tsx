@@ -45,10 +45,15 @@ export const App: React.FC = () => {
   const [activePage, setActivePage] = useState<PageKey>('dashboard');
   const [userInfo, setUserInfo] = useState<UserInfo>({ username: 'anonymous', authenticated: false });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [clusterCount, setClusterCount] = useState(0);
 
   useEffect(() => {
     safeFetch<UserInfo>('/api/v1/user')
       .then(d => setUserInfo(d || { username: 'anonymous', authenticated: false }));
+  }, []);
+
+  useEffect(() => {
+    safeFetch<any[]>('/api/v1/clusters').then(d => setClusterCount(d?.length || 1));
   }, []);
 
   const handleLogout = () => {
@@ -121,10 +126,10 @@ export const App: React.FC = () => {
           <ToolbarContent>
             <ToolbarGroup align={{ default: 'alignLeft' }}>
               <ToolbarItem>
-                <Label color="green">Operator v2.1.1</Label>
+                <Label color="green">Operator v2.2.0</Label>
               </ToolbarItem>
               <ToolbarItem>
-                <Label color="blue">3 Clusters</Label>
+                <Label color="blue">{clusterCount} Cluster{clusterCount !== 1 ? 's' : ''}</Label>
               </ToolbarItem>
             </ToolbarGroup>
             <ToolbarGroup align={{ default: 'alignRight' }}>

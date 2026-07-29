@@ -305,6 +305,29 @@ type k8sSmartScalingPolicyList struct {
 	Items []k8sSmartScalingPolicy `json:"items"`
 }
 
+type k8sScalingRuleWhen struct {
+	Metric    string `json:"metric"`
+	Operator  string `json:"operator"`
+	Threshold string `json:"threshold"`
+}
+
+type k8sScalingRuleAction struct {
+	Type     string `json:"type"`
+	Cooldown string `json:"cooldown,omitempty"`
+}
+
+type k8sScalingRule struct {
+	Name   string                `json:"name"`
+	When   k8sScalingRuleWhen   `json:"when"`
+	Action k8sScalingRuleAction `json:"action"`
+}
+
+type k8sScheduleAction struct {
+	Name   string                `json:"name"`
+	Cron   string                `json:"cron"`
+	Action k8sScalingRuleAction  `json:"action"`
+}
+
 type k8sSmartScalingPolicy struct {
 	Metadata struct {
 		Name              string `json:"name"`
@@ -316,11 +339,75 @@ type k8sSmartScalingPolicy struct {
 			Name string `json:"name"`
 			Kind string `json:"kind"`
 		} `json:"target"`
-		Rules              []interface{} `json:"rules,omitempty"`
-		Paused             bool          `json:"paused,omitempty"`
-		PrometheusEndpoint string        `json:"prometheusEndpoint,omitempty"`
-		OtelEndpoint       string        `json:"otelEndpoint,omitempty"`
+		Rules              []k8sScalingRule    `json:"rules,omitempty"`
+		Schedule           []k8sScheduleAction `json:"schedule,omitempty"`
+		Paused             bool                `json:"paused,omitempty"`
+		PrometheusEndpoint string              `json:"prometheusEndpoint,omitempty"`
+		OtelEndpoint       string              `json:"otelEndpoint,omitempty"`
 	} `json:"spec"`
+}
+
+type k8sKairosAgentList struct {
+	Items []k8sKairosAgent `json:"items"`
+}
+
+type k8sKairosAgent struct {
+	Metadata struct {
+		Name              string `json:"name"`
+		Namespace         string `json:"namespace"`
+		CreationTimestamp string `json:"creationTimestamp"`
+	} `json:"metadata"`
+	Spec struct {
+		Mode    string `json:"mode"`
+		Paused  bool   `json:"paused,omitempty"`
+		AIModel struct {
+			APIURL string `json:"apiURL,omitempty"`
+			Model  string `json:"model,omitempty"`
+		} `json:"aiModel,omitempty"`
+	} `json:"spec"`
+	Status struct {
+		Phase string `json:"phase,omitempty"`
+	} `json:"status,omitempty"`
+}
+
+type k8sKairosConsole struct {
+	Metadata struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"metadata"`
+	Spec struct {
+		Clusters []struct {
+			Name   string `json:"name"`
+			APIURL string `json:"apiURL"`
+			Region string `json:"region"`
+		} `json:"clusters"`
+	} `json:"spec"`
+}
+
+func buildRuleDetails(rules []k8sScalingRule, schedules []k8sScheduleAction) []map[string]interface{} {
+	var details []map[string]interface{}
+	for _, r := range rules {
+		details = append(details, map[string]interface{}{
+			"name":       r.Name,
+			"type":       "metric",
+			"actionType": r.Action.Type,
+			"metric":     r.When.Metric,
+			"threshold":  r.When.Operator + " " + r.When.Threshold,
+			"cooldown":   r.Action.Cooldown,
+		})
+	}
+	for _, s := range schedules {
+		details = append(details, map[string]interface{}{
+			"name":       s.Name,
+			"type":       "schedule",
+			"actionType": s.Action.Type,
+			"cron":       s.Cron,
+		})
+	}
+	if details == nil {
+		details = []map[string]interface{}{}
+	}
+	return details
 }
 
 func listKairosEvents() ([]k8sKairosEvent, error) {
@@ -343,6 +430,19 @@ func listSmartScalingPolicies() ([]k8sSmartScalingPolicy, error) {
 		return nil, err
 	}
 	var list k8sSmartScalingPolicyList
+	if err := json.Unmarshal(data, &list); err != nil {
+		return nil, err
+	}
+	return list.Items, nil
+}
+
+func listKairosAgents() ([]k8sKairosAgent, error) {
+	path := fmt.Sprintf("/apis/%s/%s/kairosagents", crdGroup, crdVersion)
+	data, err := k8sGet(path)
+	if err != nil {
+		return nil, err
+	}
+	var list k8sKairosAgentList
 	if err := json.Unmarshal(data, &list); err != nil {
 		return nil, err
 	}
@@ -375,6 +475,7 @@ func main() {
 	mux.HandleFunc("/api/v1/diffs", handleDiffs)
 	mux.HandleFunc("/api/v1/clusters", handleClusters)
 	mux.HandleFunc("/api/v1/status", handleStatus)
+	mux.HandleFunc("/api/v1/stats", handleStats)
 	mux.HandleFunc("/api/v1/observability", handleObservability)
 	mux.HandleFunc("/api/v1/metrics/query", handleMetricsQuery)
 	mux.HandleFunc("/api/v1/agent-report", handleAgentReport)
@@ -583,20 +684,32 @@ func handleMetricsQuery(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAgents(w http.ResponseWriter, r *http.Request) {
+	_ = r
 	w.Header().Set("Content-Type", "application/json")
 
-	agents := []map[string]interface{}{
-		{
-			"name":             "hub-agent",
-			"namespace":        "kairos-system",
-			"cluster":          "hub",
-			"mode":             "supervised",
-			"phase":            "Active",
-			"watchedResources": 8,
-			"totalCorrections": 0,
-			"lastCheck":        time.Now().Add(-30 * time.Second),
-			"aiModel":          "deepseek-r1-distill-qwen-14b",
-		},
+	var agents []map[string]interface{}
+
+	kairosAgents, err := listKairosAgents()
+	if err != nil {
+		log.Printf("Failed to list KairosAgents: %v", err)
+	} else {
+		for _, a := range kairosAgents {
+			phase := a.Status.Phase
+			if phase == "" {
+				phase = "Active"
+			}
+			agents = append(agents, map[string]interface{}{
+				"name":             a.Metadata.Name,
+				"namespace":        a.Metadata.Namespace,
+				"cluster":          "hub",
+				"mode":             a.Spec.Mode,
+				"phase":            phase,
+				"watchedResources": 0,
+				"totalCorrections": 0,
+				"lastCheck":        a.Metadata.CreationTimestamp,
+				"aiModel":          a.Spec.AIModel.Model,
+			})
+		}
 	}
 
 	agentStore.RLock()
@@ -615,7 +728,7 @@ func handleAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	agentStore.RUnlock()
 
-	if len(agents) == 1 && isDemoMode() {
+	if len(agents) == 0 && isDemoMode() {
 		agents = append(agents,
 			map[string]interface{}{
 				"name": "east-agent", "namespace": "kairos-system", "cluster": "east",
@@ -630,6 +743,10 @@ func handleAgents(w http.ResponseWriter, r *http.Request) {
 				"aiModel": "deepseek-r1-distill-qwen-14b",
 			},
 		)
+	}
+
+	if agents == nil {
+		agents = []map[string]interface{}{}
 	}
 
 	json.NewEncoder(w).Encode(agents)
@@ -1242,7 +1359,8 @@ func handlePolicies(w http.ResponseWriter, r *http.Request) {
 			"namespace":          p.Metadata.Namespace,
 			"cluster":            "hub",
 			"target":             p.Spec.Target.Name,
-			"rules":              len(p.Spec.Rules),
+			"rules":              len(p.Spec.Rules) + len(p.Spec.Schedule),
+			"ruleDetails":        buildRuleDetails(p.Spec.Rules, p.Spec.Schedule),
 			"paused":             p.Spec.Paused,
 			"metricsSource":      metricsSource,
 			"prometheusEndpoint": p.Spec.PrometheusEndpoint,
@@ -1344,13 +1462,32 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleClusters(w http.ResponseWriter, r *http.Request) {
+	_ = r
 	w.Header().Set("Content-Type", "application/json")
-	clusters := []map[string]interface{}{
-		{"name": "hub", "region": "central", "status": "healthy", "agents": 1, "policies": 1, "apiURL": "https://api.cluster-xqg4c.dynamic2.redhatworkshops.io:6443"},
-		{"name": "east", "region": "us-east-2", "status": "healthy", "agents": 1, "policies": 0, "apiURL": "https://api.cluster-2847b.dynamic2.redhatworkshops.io:6443"},
-		{"name": "west", "region": "us-west-1", "status": "healthy", "agents": 1, "policies": 0, "apiURL": "https://api.cluster-5zjkk.dynamic2.redhatworkshops.io:6443"},
+
+	data, err := k8sGet(fmt.Sprintf("/apis/%s/%s/namespaces/kairos-system/kairosconsoles/kairos", crdGroup, crdVersion))
+	if err == nil {
+		var console k8sKairosConsole
+		if json.Unmarshal(data, &console) == nil && len(console.Spec.Clusters) > 0 {
+			var clusters []map[string]interface{}
+			for _, c := range console.Spec.Clusters {
+				clusters = append(clusters, map[string]interface{}{
+					"name":     c.Name,
+					"region":   c.Region,
+					"status":   "healthy",
+					"agents":   0,
+					"policies": 0,
+					"apiURL":   c.APIURL,
+				})
+			}
+			json.NewEncoder(w).Encode(clusters)
+			return
+		}
 	}
-	json.NewEncoder(w).Encode(clusters)
+
+	json.NewEncoder(w).Encode([]map[string]interface{}{
+		{"name": "hub", "region": "local", "status": "healthy", "agents": 0, "policies": 0},
+	})
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -1403,7 +1540,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	status := map[string]interface{}{
-		"operatorVersion": "2.1.1",
+		"operatorVersion": "2.2.0",
 		"totalAgents":     totalAgents,
 		"totalPolicies":   totalPolicies,
 		"totalEvents":     totalEvents,
@@ -1445,4 +1582,78 @@ func splitPath(path string) []string {
 		}
 	}
 	return parts
+}
+
+func handleStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	totalAgents := 0
+	agents, err := listKairosAgents()
+	if err == nil {
+		totalAgents = len(agents)
+	}
+	agentStore.RLock()
+	totalAgents += len(agentStore.agents)
+	agentStore.RUnlock()
+	if totalAgents == 0 {
+		totalAgents = 1
+	}
+
+	totalPolicies := 0
+	policies, err := listSmartScalingPolicies()
+	if err == nil {
+		totalPolicies = len(policies)
+	}
+
+	totalEvents := 0
+	totalApprovals := 0
+	now := time.Now()
+	eventsByDay := make(map[string]int)
+	appliedByDay := make(map[string]int)
+	skippedByDay := make(map[string]int)
+
+	kairosEvents, err := listKairosEvents()
+	if err == nil {
+		totalEvents = len(kairosEvents)
+		for _, ev := range kairosEvents {
+			if ev.Spec.Status == "pending-approval" {
+				totalApprovals++
+			}
+			day := ev.Metadata.CreationTimestamp[:10]
+			eventsByDay[day]++
+			if ev.Spec.Status == "applied" {
+				appliedByDay[day]++
+			} else {
+				skippedByDay[day]++
+			}
+		}
+	}
+
+	resourceDist := []map[string]interface{}{
+		{"name": "Agents", "value": totalAgents},
+		{"name": "Policies", "value": totalPolicies},
+		{"name": "Events", "value": totalEvents},
+		{"name": "Approvals", "value": totalApprovals},
+	}
+
+	eventsTrend := make([]map[string]interface{}, 0, 7)
+	scalingActions := make([]map[string]interface{}, 0, 7)
+	for i := 6; i >= 0; i-- {
+		day := now.AddDate(0, 0, -i).Format("2006-01-02")
+		eventsTrend = append(eventsTrend, map[string]interface{}{
+			"date":  day,
+			"count": eventsByDay[day],
+		})
+		scalingActions = append(scalingActions, map[string]interface{}{
+			"date":    day,
+			"applied": appliedByDay[day],
+			"skipped": skippedByDay[day],
+		})
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"resourceDistribution": resourceDist,
+		"eventsTrend":          eventsTrend,
+		"scalingActions":       scalingActions,
+	})
 }

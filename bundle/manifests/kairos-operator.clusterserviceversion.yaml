@@ -285,8 +285,8 @@ metadata:
       ]
     capabilities: Full Lifecycle
     categories: AI/Machine Learning, Monitoring
-    containerImage: quay.io/maximilianopizarro/kairos-operator:v2.1.1
-    createdAt: "2026-07-28T22:21:23Z"
+    containerImage: quay.io/maximilianopizarro/kairos-operator:v2.2.0
+    createdAt: "2026-07-29T15:36:25Z"
     description: AI-powered Kubernetes resource optimizer with SSA, ArgoCD-safe, multi-cluster
       governance
     operatorframework.io/suggested-namespace: kairos-system
@@ -294,7 +294,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/maximilianoPizarro/kairos
     support: maximilianopizarro
-  name: kairos-operator.v2.1.1
+  name: kairos-operator.v2.2.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -426,23 +426,7 @@ spec:
 
     ### Architecture
 
-    ```
-    ┌─────────────────────────────────────────────────────────┐
-    │                     Hub Cluster                          │
-    │  ┌──────────────┐  ┌─────────────┐  ┌──────────────┐   │
-    │  │   Kairos     │  │   Kairos    │  │  SmartScaling │   │
-    │  │  Operator    │──│   Console   │  │   Policies    │   │
-    │  └──────────────┘  └─────────────┘  └──────────────┘   │
-    └───────────┬─────────────────────────────────────────────┘
-                │  Agent Reports (mTLS)
-    ┌───────────┼──────────────────────────────────────────┐
-    │    ┌──────▼──────┐         ┌──────────────┐          │
-    │    │ KairosAgent │ ──────► │  Workloads   │          │
-    │    │  (east)     │  SSA    │  (annotated) │          │
-    │    └─────────────┘         └──────────────┘          │
-    │                    Spoke Cluster                       │
-    └──────────────────────────────────────────────────────┘
-    ```
+    ![Kairos Architecture](https://raw.githubusercontent.com/maximilianoPizarro/kairos/main/docs/images/architecture.png)
 
     ### Prerequisites
 
@@ -642,7 +626,7 @@ spec:
                 - --health-probe-bind-address=:8081
                 command:
                 - /manager
-                image: quay.io/maximilianopizarro/kairos-operator:v2.1.1
+                image: quay.io/maximilianopizarro/kairos-operator:v2.2.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -758,4 +742,4 @@ spec:
   provider:
     name: maximilianopizarro
     url: https://github.com/maximilianoPizarro
-  version: 2.1.1
+  version: 2.2.0

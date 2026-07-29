@@ -18,8 +18,12 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -339,7 +343,7 @@ func (r *SmartScalingPolicyReconciler) evaluateRules(
 		}
 
 		activeRules = append(activeRules, rule.Name)
-		if r.inCooldown(policy, rule.Name, rule.Action) {
+		if r.inCooldown(policy, rule.Action) {
 			continue
 		}
 		actions = append(actions, plannedAction{ruleName: rule.Name, action: rule.Action})
@@ -360,7 +364,7 @@ func (r *SmartScalingPolicyReconciler) evaluateRules(
 		}
 
 		activeRules = append(activeRules, schedule.Name)
-		if r.inCooldown(policy, schedule.Name, schedule.Action) {
+		if r.inCooldown(policy, schedule.Action) {
 			continue
 		}
 		actions = append(actions, plannedAction{ruleName: schedule.Name, action: schedule.Action})
@@ -373,27 +377,83 @@ func ruleEnabled(enabled *bool) bool {
 	return enabled == nil || *enabled
 }
 
-// stubMetricEvaluator returns deterministic dummy metric values for development.
-type stubMetricEvaluator struct{}
-
-func (stubMetricEvaluator) Evaluate(_ context.Context, metric string) (float64, error) {
-	if metric == "" {
-		return 0, fmt.Errorf("metric name is required")
+// queryPrometheus performs a PromQL instant query against the configured endpoint.
+// Returns (value, nil) on success, or (0, error) if unreachable or no data.
+func queryPrometheus(ctx context.Context, endpoint, promQL string) (float64, error) {
+	if endpoint == "" {
+		return 0, fmt.Errorf("no prometheus endpoint configured")
 	}
-	// Stub value chosen to exercise GreaterThan/LessThan rules during development.
-	return 150, nil
+
+	base := endpoint
+	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
+		base = "http://" + base
+	}
+
+	queryURL := base + "/api/v1/query?" + url.Values{"query": {promQL}}.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, queryURL, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create request: %w", err)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("query prometheus: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("read response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("prometheus returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var result struct {
+		Status string `json:"status"`
+		Data   struct {
+			ResultType string `json:"resultType"`
+			Result     []struct {
+				Value []json.RawMessage `json:"value"`
+			} `json:"result"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, fmt.Errorf("parse response: %w", err)
+	}
+	if result.Status != "success" || len(result.Data.Result) == 0 {
+		return 0, fmt.Errorf("no data returned for query: %s", promQL)
+	}
+	if len(result.Data.Result[0].Value) < 2 {
+		return 0, fmt.Errorf("unexpected value format in prometheus response")
+	}
+	var valueStr string
+	if err := json.Unmarshal(result.Data.Result[0].Value[1], &valueStr); err != nil {
+		return 0, fmt.Errorf("parse metric value: %w", err)
+	}
+	return strconv.ParseFloat(valueStr, 64)
 }
 
 func (r *SmartScalingPolicyReconciler) evaluateMetricRule(
 	ctx context.Context,
-	_ *kairosv1alpha1.SmartScalingPolicy,
+	policy *kairosv1alpha1.SmartScalingPolicy,
 	rule kairosv1alpha1.ScalingRule,
 ) (bool, error) {
-	evaluator := stubMetricEvaluator{}
-	value, err := evaluator.Evaluate(ctx, rule.When.Metric)
-	if err != nil {
-		return false, err
+	log := logf.FromContext(ctx)
+
+	promEndpoint := policy.Spec.PrometheusEndpoint
+	if promEndpoint == "" {
+		log.V(1).Info("No prometheus endpoint configured, skipping metric rule", "rule", rule.Name)
+		return false, nil
 	}
+
+	value, err := queryPrometheus(ctx, promEndpoint, rule.When.Metric)
+	if err != nil {
+		log.Info("Prometheus query failed, skipping rule (safe default)", "rule", rule.Name, "error", err.Error())
+		return false, nil
+	}
+
 	return compareMetric(value, rule.When.Operator, rule.When.Threshold)
 }
 
@@ -455,23 +515,20 @@ func evaluateScheduleRule(cronExpr string, now time.Time) (bool, error) {
 
 func (r *SmartScalingPolicyReconciler) inCooldown(
 	policy *kairosv1alpha1.SmartScalingPolicy,
-	ruleName string,
 	action kairosv1alpha1.ScalingAction,
 ) bool {
-	if action.Cooldown == "" || policy.Status.LastScalingEvent == nil {
+	if policy.Status.LastScalingEvent == nil {
 		return false
 	}
 
-	cooldown, err := time.ParseDuration(action.Cooldown)
-	if err != nil {
-		return false
+	cooldown := 60 * time.Second
+	if action.Cooldown != "" {
+		if parsed, err := time.ParseDuration(action.Cooldown); err == nil {
+			cooldown = parsed
+		}
 	}
 
 	last := policy.Status.LastScalingEvent
-	if last.Rule != ruleName || last.Action != action.Type {
-		return false
-	}
-
 	return time.Since(last.Timestamp.Time) < cooldown
 }
 

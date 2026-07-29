@@ -9,24 +9,46 @@ import {
   DescriptionListGroup,
   DescriptionListTerm,
   DescriptionListDescription,
+  ExpandableSection,
+  DataList,
+  DataListItem,
+  DataListItemRow,
+  DataListItemCells,
+  DataListCell,
 } from '@patternfly/react-core';
 import { safeFetch } from '../utils/api';
+
+interface RuleDetail {
+  name: string;
+  type: string;
+  actionType: string;
+  metric?: string;
+  threshold?: string;
+  cron?: string;
+  cooldown?: string;
+}
 
 interface PolicyInfo {
   name: string;
   namespace: string;
   target: string;
   rules: number;
+  ruleDetails?: RuleDetail[];
   paused: boolean;
   lastAction: string;
 }
 
 export const Policies: React.FC = () => {
   const [policies, setPolicies] = useState<PolicyInfo[]>([]);
+  const [expandedPolicies, setExpandedPolicies] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     safeFetch<PolicyInfo[]>('/api/v1/policies').then(d => setPolicies(d || []));
   }, []);
+
+  const toggleExpanded = (name: string) => {
+    setExpandedPolicies(prev => ({ ...prev, [name]: !prev[name] }));
+  };
 
   return (
     <>
@@ -54,7 +76,47 @@ export const Policies: React.FC = () => {
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>Rules</DescriptionListTerm>
-                <DescriptionListDescription>{policy.rules}</DescriptionListDescription>
+                <DescriptionListDescription>
+                  <ExpandableSection
+                    toggleText={`${policy.rules} Rule${policy.rules !== 1 ? 's' : ''}`}
+                    isExpanded={expandedPolicies[policy.name] || false}
+                    onToggle={() => toggleExpanded(policy.name)}
+                  >
+                    {policy.ruleDetails && policy.ruleDetails.length > 0 ? (
+                      <DataList aria-label="Rule details" isCompact>
+                        {policy.ruleDetails.map((rule) => (
+                          <DataListItem key={rule.name}>
+                            <DataListItemRow>
+                              <DataListItemCells
+                                dataListCells={[
+                                  <DataListCell key="name" width={2}>
+                                    <strong>{rule.name}</strong>
+                                  </DataListCell>,
+                                  <DataListCell key="type" width={1}>
+                                    <Label color={rule.type === 'metric' ? 'blue' : 'purple'} isCompact>
+                                      {rule.type}
+                                    </Label>
+                                  </DataListCell>,
+                                  <DataListCell key="action" width={2}>
+                                    {rule.actionType}
+                                  </DataListCell>,
+                                  <DataListCell key="detail" width={3}>
+                                    {rule.type === 'metric'
+                                      ? `${rule.metric || ''} ${rule.threshold || ''}`
+                                      : rule.cron || ''}
+                                    {rule.cooldown ? ` (cooldown: ${rule.cooldown})` : ''}
+                                  </DataListCell>,
+                                ]}
+                              />
+                            </DataListItemRow>
+                          </DataListItem>
+                        ))}
+                      </DataList>
+                    ) : (
+                      <span>No rule details available</span>
+                    )}
+                  </ExpandableSection>
+                </DescriptionListDescription>
               </DescriptionListGroup>
               <DescriptionListGroup>
                 <DescriptionListTerm>Last Action</DescriptionListTerm>

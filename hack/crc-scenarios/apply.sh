@@ -16,7 +16,7 @@ oc apply -f "$DIR/06-kairos-events.yaml"
 oc apply -f "$DIR/07-screenshot-events.yaml"
 
 # Pin console to harden digest if tag cache is stale on CRC
-DIGEST="${KAIROS_CONSOLE_DIGEST:-sha256:3d0664e2a63bc554f1eeb38c6fedae2195f81ef0837fb9801cc549945bebec1c}"
+DIGEST="${KAIROS_CONSOLE_DIGEST:-sha256:96a4d448ddd2bfdd396353b4930c7916b6b006b428d054191eca10070cb9e1e9}"
 if oc get kairosconsole kairos -n "$NS" >/dev/null 2>&1; then
   oc patch kairosconsole kairos -n "$NS" --type=merge \
     -p "{\"spec\":{\"image\":\"quay.io/maximilianopizarro/kairos-console@${DIGEST}\"}}"

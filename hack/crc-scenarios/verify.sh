@@ -28,10 +28,10 @@ oc get deploy -n "$NS" kairos-console -o jsonpath='{.status.readyReplicas}' | gr
 IMG=$(oc get pod -n "$NS" -l app=kairos-console -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>/dev/null || true)
 echo "  console imageID: ${IMG:-unknown}"
 # Prefer digest from harden CI (e048312); tag-only cache may be stale on CRC.
-if [[ "$IMG" == *"sha256:3d0664e2a63bc554f1eeb38c6fedae2195f81ef0837fb9801cc549945bebec1c"* ]]; then
-  ok "console image is harden digest 3d0664e2"
-elif [[ "$IMG" == *"sha256:3fa2dd9e"* ]]; then
-  bad "console still on stale digest 3fa2dd9e — pin KairosConsole.spec.image to @sha256:3d0664e2..."
+if [[ "$IMG" == *"sha256:96a4d448ddd2bfdd396353b4930c7916b6b006b428d054191eca10070cb9e1e9"* ]]; then
+  ok "console image is approvals-fix digest 96a4d448"
+elif [[ "$IMG" == *"sha256:3fa2dd9e"* ]] || [[ "$IMG" == *"sha256:3d0664e2"* ]]; then
+  bad "console on stale digest — pin KairosConsole.spec.image to @sha256:96a4d448..."
 else
   ok "console image present (verify digest manually if APIs look stale)"
 fi

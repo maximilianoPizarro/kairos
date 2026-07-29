@@ -193,7 +193,23 @@ spec:
 
     ### Architecture
 
-    ![Kairos Architecture](https://raw.githubusercontent.com/maximilianoPizarro/kairos/main/docs/images/architecture.png)
+    **Hub Cluster**
+    * **Kairos Operator** — reconciles KairosAgent, SmartScalingPolicy, KairosConsole, and KairosEvent CRs
+    * **Kairos Console** — multi-cluster governance UI (approvals, policies, history, observability)
+    * **SmartScaling Policies** — metric/schedule based scaling rules
+    * **KairosEvents** — audit trail of every scaling decision
+
+    **Spoke Cluster(s)**
+    * **KairosAgent** — watches annotated workloads and reports to the hub over mTLS
+    * **Workloads** — Deployments / StatefulSets patched with Server-Side Apply (SSA)
+
+    **External integrations**
+    * **AI Model** — OpenAI / Ollama / vLLM for recommendations
+    * **Prometheus / Thanos** — metrics for scaling decisions
+
+    Flow: `Spoke Agent --(mTLS reports)--> Hub Console/Operator --(SSA)--> Workloads`
+
+    Full diagram: https://raw.githubusercontent.com/maximilianoPizarro/kairos/main/docs/images/architecture.png
 
     ### Prerequisites
 

@@ -597,6 +597,7 @@ func (r *KairosConsoleReconciler) ensureOAuthCookieSecret(ctx context.Context, c
 }
 
 func (r *KairosConsoleReconciler) reconcileConsoleRBAC(ctx context.Context, console *kairosv1alpha1.KairosConsole) error {
+	log := logf.FromContext(ctx)
 	saName := consoleName(console)
 	crName := "kairos-console-reader"
 	crbName := "kairos-console-reader"
@@ -720,17 +721,15 @@ func (r *KairosConsoleReconciler) reconcileConsoleRBAC(ctx context.Context, cons
 	if err := r.Get(ctx, types.NamespacedName{Name: monCrbName}, existingMonCRB); err != nil {
 		if errors.IsNotFound(err) {
 			if err := r.Create(ctx, monCrb); err != nil {
-				return fmt.Errorf("creating ClusterRoleBinding %s: %w", monCrbName, err)
+				log.Info("Could not create monitoring ClusterRoleBinding (non-fatal, metrics may be unavailable)", "error", err.Error())
 			}
-		} else {
-			return err
 		}
 	} else {
 		existingMonCRB.Subjects = monCrb.Subjects
 		existingMonCRB.RoleRef = monCrb.RoleRef
 		existingMonCRB.Labels = monCrb.Labels
 		if err := r.Update(ctx, existingMonCRB); err != nil {
-			return fmt.Errorf("updating ClusterRoleBinding %s: %w", monCrbName, err)
+			log.Info("Could not update monitoring ClusterRoleBinding (non-fatal)", "error", err.Error())
 		}
 	}
 

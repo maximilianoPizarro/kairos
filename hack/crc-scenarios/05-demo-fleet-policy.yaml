@@ -1,0 +1,25 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: SmartScalingPolicy
+metadata:
+  name: demo-fleet-policy
+  namespace: kairos-demo
+spec:
+  paused: false
+  prometheusEndpoint: ''
+  rules:
+  - action:
+      cooldown: 10m
+      replicas: 1
+      type: AddReplicas
+    enabled: true
+    name: cpu-scale-up
+    when:
+      for: 2m
+      metric: up
+      operator: GreaterThan
+      threshold: '0'
+  target:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-svc-1
+    namespace: kairos-demo

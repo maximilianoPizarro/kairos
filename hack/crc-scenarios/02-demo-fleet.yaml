@@ -1,0 +1,263 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-1
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-1
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-svc-1
+  template:
+    metadata:
+      labels:
+        app: demo-svc-1
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-2
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-2
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-svc-2
+  template:
+    metadata:
+      labels:
+        app: demo-svc-2
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-3
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-3
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-3
+  template:
+    metadata:
+      labels:
+        app: demo-svc-3
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-4
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-4
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-4
+  template:
+    metadata:
+      labels:
+        app: demo-svc-4
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-5
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-5
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-5
+  template:
+    metadata:
+      labels:
+        app: demo-svc-5
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-6
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-6
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-6
+  template:
+    metadata:
+      labels:
+        app: demo-svc-6
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-7
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-7
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-7
+  template:
+    metadata:
+      labels:
+        app: demo-svc-7
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-svc-8
+  namespace: kairos-demo
+  labels:
+    app: demo-svc-8
+    kairos.io/managed: 'true'
+  annotations:
+    kairos.io/managed: 'true'
+    kairos.io/policy: demo-fleet-policy
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: demo-svc-8
+  template:
+    metadata:
+      labels:
+        app: demo-svc-8
+        kairos.io/managed: 'true'
+    spec:
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi

@@ -357,14 +357,14 @@
       Agent uses an OpenAI-compatible model endpoint; policies and managed Deployments are real cluster objects.
     </p>
     <div class="alert" style="border-left: 3px solid #00e5ff; background: #161b22; padding: 0.75rem 1rem; margin: 1rem 0;">
-      <strong>What's shown:</strong> only screens with real data (Dashboard, AI Agents, Scaling Policies, Managed Resources).
-      Observability / Approvals / History / Diff View are omitted here when empty or disconnected — those screens fill once Thanos/monitoring and KairosEvents are available.
+      <strong>What's shown:</strong> live CRC scenario with real CRs — Dashboard, Agents, Policies, Events, Managed Resources, Approvals, History, and Diff View.
+      Observability is omitted when Thanos / cluster monitoring is disconnected on OpenShift local.
     </div>
 
     <h3>Dashboard</h3>
     <div class="img-container" onclick="openLightbox(this)">
       <img src="images/screenshots/01-dashboard.png" alt="Dashboard v2.2.0">
-      <div class="img-caption">Operator status, PatternFly donut (resource distribution), 7-day scaling trend, dynamic cluster count</div>
+      <div class="img-caption">Operator status, PatternFly donut (resource distribution), 7-day scaling trend, hub cluster counts</div>
     </div>
 
     <h3>AI Agents</h3>
@@ -383,10 +383,34 @@
       <div class="img-caption">Per-rule metric/schedule, action type, threshold and cooldown</div>
     </div>
 
+    <h3>Events</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/04-events.png" alt="Scaling Events v2.2.0">
+      <div class="img-caption">Live KairosEvent stream — scale_up / scale_down / right-size with agent reasons</div>
+    </div>
+
     <h3>Managed Resources</h3>
     <div class="img-container" onclick="openLightbox(this)">
       <img src="images/screenshots/06-resources.png" alt="Managed Resources v2.2.0">
       <div class="img-caption">Workloads annotated with <code>kairos.io/managed: "true"</code> across the hub cluster</div>
+    </div>
+
+    <h3>Approvals</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/07-approvals.png" alt="Pending Approvals v2.2.0">
+      <div class="img-caption">Supervised mode — pending scale_up and increase_resources with Approve / Reject</div>
+    </div>
+
+    <h3>History</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/08-history.png" alt="Change History v2.2.0">
+      <div class="img-caption">Applied, dry-run, rejected, and pending-approval outcomes with before/after CPU &amp; memory</div>
+    </div>
+
+    <h3>Diff View</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/09-diffview.png" alt="Diff View v2.2.0">
+      <div class="img-caption">Side-by-side before/after snapshots for applied and dry-run corrections</div>
     </div>
   </div>
 

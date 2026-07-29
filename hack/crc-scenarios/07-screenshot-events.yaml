@@ -1,0 +1,72 @@
+# Extra KairosEvents for product screenshots (Approvals / History / Diff View).
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-shot-pending-1
+  namespace: kairos-system
+spec:
+  agentName: hub-agent
+  cluster: hub
+  action: scale_up
+  resource: demo-app
+  namespace: kairos-system
+  policyName: demo-scaling-policy
+  reason: "CPU > 70% for 5m — recommend +1 replica"
+  status: pending-approval
+  dryRun: false
+  before:
+    cpu: "100m"
+    memory: "128Mi"
+    replicas: "2"
+  after:
+    cpu: "100m"
+    memory: "128Mi"
+    replicas: "3"
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-shot-pending-2
+  namespace: kairos-system
+spec:
+  agentName: hub-agent
+  cluster: hub
+  action: increase_resources
+  resource: demo-svc-1
+  namespace: kairos-demo
+  policyName: demo-fleet-policy
+  reason: "Memory pressure — increase request 128Mi → 256Mi"
+  status: pending-approval
+  dryRun: false
+  before:
+    cpu: "50m"
+    memory: "128Mi"
+    replicas: "1"
+  after:
+    cpu: "50m"
+    memory: "256Mi"
+    replicas: "1"
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-shot-applied-mem
+  namespace: kairos-system
+spec:
+  agentName: hub-agent
+  cluster: hub
+  action: decrease_resources
+  resource: demo-svc-2
+  namespace: kairos-demo
+  policyName: demo-fleet-policy
+  reason: "Right-size after sustained low utilization"
+  status: applied
+  dryRun: false
+  before:
+    cpu: "50m"
+    memory: "128Mi"
+    replicas: "1"
+  after:
+    cpu: "10m"
+    memory: "32Mi"
+    replicas: "1"

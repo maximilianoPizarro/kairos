@@ -1,0 +1,67 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-applied-1
+  namespace: kairos-system
+spec:
+  action: decrease_resources
+  after:
+    cpu: 5m
+    memory: 16Mi
+    replicas: '1'
+  agentName: hub-agent
+  before:
+    cpu: 50m
+    memory: 128Mi
+    replicas: '1'
+  cluster: hub
+  namespace: kairos-demo
+  policyName: demo-scaling-policy
+  reason: Right-size memory after low utilization
+  resource: demo-svc-1
+  status: applied
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-dry-run-1
+  namespace: kairos-system
+spec:
+  action: scale_down
+  after:
+    cpu: 100m
+    memory: 128Mi
+    replicas: '1'
+  agentName: hub-agent
+  before:
+    cpu: 100m
+    memory: 128Mi
+    replicas: '2'
+  cluster: hub
+  namespace: kairos-system
+  reason: 'Dry-run: would remove 1 replica'
+  resource: demo-app
+  status: dry-run
+---
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosEvent
+metadata:
+  name: evt-pending-approval-1
+  namespace: kairos-system
+spec:
+  action: scale_up
+  after:
+    cpu: 100m
+    memory: 128Mi
+    replicas: '3'
+  agentName: hub-agent
+  before:
+    cpu: 100m
+    memory: 128Mi
+    replicas: '2'
+  cluster: hub
+  namespace: kairos-system
+  policyName: demo-scaling-policy
+  reason: AI recommended +1 replica (CPU > 70%)
+  resource: demo-app
+  status: pending-approval

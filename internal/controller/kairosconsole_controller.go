@@ -623,6 +623,12 @@ func (r *KairosConsoleReconciler) reconcileConsoleRBAC(ctx context.Context, cons
 				},
 				Verbs: []string{"get", "list", "watch"},
 			},
+			// Approvals UI updates KairosEvent.spec.status (pending-approval → applied/rejected).
+			{
+				APIGroups: []string{"kairos.maximilianopizarro.github.io"},
+				Resources: []string{"kairosevents"},
+				Verbs:     []string{"update", "patch"},
+			},
 			{
 				APIGroups: []string{"apps"},
 				Resources: []string{"deployments", "statefulsets"},

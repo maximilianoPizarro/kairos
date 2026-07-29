@@ -1,0 +1,27 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: KairosAgent
+metadata:
+  name: hub-agent
+  namespace: kairos-system
+spec:
+  aiModel:
+    apiURL: https://<your-openai-compatible-endpoint>/v1
+    model: Granite-Vision-3.2
+    timeoutSeconds: 5
+  correctionPolicy:
+    dryRun: true
+    maxActionsPerHour: 10
+    requireApprovalAbove: 30%
+    rollbackOnFailure: true
+  mode: supervised
+  paused: true
+  reporting:
+    interval: 30s
+  watch:
+    labelSelector: kairos.io/managed=true
+    namespaces:
+    - kairos-system
+    - kairos-demo
+    resourceTypes:
+    - Deployment
+  dryRun: true

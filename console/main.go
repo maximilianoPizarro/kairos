@@ -937,8 +937,10 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newStatus := "applied"
+	responseStatus := "approved"
 	if action == "reject" {
 		newStatus = "rejected"
+		responseStatus = "rejected"
 	}
 
 	// Try K8s API first: find the KairosEvent by UID and update its status
@@ -957,15 +959,18 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 					},
 					"spec": ev.Spec,
 				})
-				if marshalErr == nil {
-					putPath := fmt.Sprintf("/apis/%s/%s/namespaces/%s/kairosevents/%s",
-						crdGroup, crdVersion, ev.Metadata.Namespace, ev.Metadata.Name)
-					_, putErr := k8sPut(putPath, evJSON)
-					if putErr != nil {
-						log.Printf("Failed to update KairosEvent %s: %v", ev.Metadata.Name, putErr)
-					}
+				if marshalErr != nil {
+					http.Error(w, `{"error":"failed to marshal event"}`, http.StatusInternalServerError)
+					return
 				}
-				json.NewEncoder(w).Encode(map[string]string{"status": action + "d", "id": id})
+				putPath := fmt.Sprintf("/apis/%s/%s/namespaces/%s/kairosevents/%s",
+					crdGroup, crdVersion, ev.Metadata.Namespace, ev.Metadata.Name)
+				if _, putErr := k8sPut(putPath, evJSON); putErr != nil {
+					log.Printf("Failed to update KairosEvent %s: %v", ev.Metadata.Name, putErr)
+					http.Error(w, `{"error":"failed to update KairosEvent"}`, http.StatusInternalServerError)
+					return
+				}
+				json.NewEncoder(w).Encode(map[string]string{"status": responseStatus, "id": id})
 				return
 			}
 		}
@@ -988,7 +993,7 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"status": action + "d", "id": id})
+	json.NewEncoder(w).Encode(map[string]string{"status": responseStatus, "id": id})
 }
 
 // --- 2.3: /api/v1/history - KairosEvent CRs with pagination ---

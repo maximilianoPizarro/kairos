@@ -1,0 +1,43 @@
+apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
+kind: SmartScalingPolicy
+metadata:
+  name: demo-scaling-policy
+  namespace: kairos-system
+spec:
+  paused: false
+  prometheusEndpoint: ''
+  rules:
+  - action:
+      cooldown: 5m
+      replicas: 1
+      type: AddReplicas
+    enabled: true
+    name: high-cpu-scale-up
+    when:
+      for: 1m
+      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-system',pod=~'demo-app.*'}[5m]))
+      operator: GreaterThan
+      threshold: '0.01'
+  - action:
+      cooldown: 5m
+      replicas: 1
+      type: RemoveReplicas
+    enabled: true
+    name: low-cpu-scale-down
+    when:
+      for: 1m
+      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-system',pod=~'demo-app.*'}[5m]))
+      operator: LessThan
+      threshold: '0.9'
+  schedule:
+  - action:
+      cooldown: 1h
+      replicas: 1
+      type: AddReplicas
+    cron: 0 8 * * 1-5
+    name: morning-scale-up
+  target:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-app
+    namespace: kairos-system

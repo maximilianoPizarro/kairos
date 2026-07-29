@@ -6,7 +6,7 @@ Live screenshots are published on GitHub Pages:
 
 ## What is shown
 
-Only screens with real cluster data (captured on OpenShift local / CRC):
+Captured on OpenShift local (CRC) with the `hack/crc-scenarios` demo (real CRs, no mock console data):
 
 | Screen | File |
 |---|---|
@@ -14,23 +14,31 @@ Only screens with real cluster data (captured on OpenShift local / CRC):
 | AI Agents (`Granite-Vision-3.2`) | `docs/images/screenshots/02-agents.png` |
 | Scaling Policies | `docs/images/screenshots/03-policies.png` |
 | Rules expanded | `docs/images/screenshots/03b-policies-rules-expanded.png` |
+| Events | `docs/images/screenshots/04-events.png` |
 | Managed Resources | `docs/images/screenshots/06-resources.png` |
+| Approvals (supervised) | `docs/images/screenshots/07-approvals.png` |
+| History | `docs/images/screenshots/08-history.png` |
+| Diff View | `docs/images/screenshots/09-diffview.png` |
 
 ## Intentionally omitted
 
-These views were empty or disconnected on the capture cluster and are **not** published as product screenshots:
+- **Observability** — Thanos / cluster monitoring not wired on CRC (`Disconnected`)
 
-- **Observability** — Thanos / monitoring not wired on CRC (`Disconnected`)
-- **Approvals / History / Diff View** — no pending `KairosEvent` approvals or applied diffs yet
+## Re-capture
 
-They will be added once a scenario with real events/approvals and monitoring is available.
+```bash
+oc port-forward -n kairos-system svc/kairos-console 8181:8080
+hack/crc-scenarios/apply.sh          # if scenario not already applied
+hack/crc-scenarios/capture-screenshots.sh
+```
 
 ## Environment used for capture
 
 - Operator / Console: `v2.2.0`
-- 1× `KairosAgent` (`hub-agent`)
+- 1× `KairosAgent` (`hub-agent`, supervised)
 - 2× `SmartScalingPolicy`
-- Demo fleet in `kairos-demo` (Deployments with `kairos.io/managed: "true"`)
+- Demo fleet in `kairos-demo` + `demo-app`
+- KairosEvents covering pending-approval, applied, dry-run, rejected
 
 ## Configure an AI agent (credentials stay local)
 

@@ -366,7 +366,10 @@ type k8sKairosAgent struct {
 		} `json:"aiModel,omitempty"`
 	} `json:"spec"`
 	Status struct {
-		Phase string `json:"phase,omitempty"`
+		Phase            string `json:"phase,omitempty"`
+		WatchedResources int32  `json:"watchedResources,omitempty"`
+		TotalCorrections int32  `json:"totalCorrections,omitempty"`
+		LastCheckTime    string `json:"lastCheckTime,omitempty"`
 	} `json:"status,omitempty"`
 }
 
@@ -698,15 +701,19 @@ func handleAgents(w http.ResponseWriter, r *http.Request) {
 			if phase == "" {
 				phase = "Active"
 			}
+			lastCheck := a.Status.LastCheckTime
+			if lastCheck == "" {
+				lastCheck = a.Metadata.CreationTimestamp
+			}
 			agents = append(agents, map[string]interface{}{
 				"name":             a.Metadata.Name,
 				"namespace":        a.Metadata.Namespace,
 				"cluster":          "hub",
 				"mode":             a.Spec.Mode,
 				"phase":            phase,
-				"watchedResources": 0,
-				"totalCorrections": 0,
-				"lastCheck":        a.Metadata.CreationTimestamp,
+				"watchedResources": a.Status.WatchedResources,
+				"totalCorrections": a.Status.TotalCorrections,
+				"lastCheck":        lastCheck,
 				"aiModel":          a.Spec.AIModel.Model,
 			})
 		}
@@ -1400,24 +1407,22 @@ func handleEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Local base event
-	events = append(events, map[string]interface{}{
-		"timestamp": time.Now().Add(-2 * time.Minute),
-		"type":      "ScalingEvaluated",
-		"resource":  "kairos-console",
-		"namespace": "kairos-system",
-		"action":    "NoAction",
-		"detail":    "All metrics within threshold",
-		"cluster":   "hub",
-	})
-
 	// Merge events reported by spoke agents
 	agentStore.RLock()
 	events = append(events, agentStore.events...)
 	agentStore.RUnlock()
 
-	if len(events) == 1 && isDemoMode() {
+	if len(events) == 0 && isDemoMode() {
 		events = append(events,
+			map[string]interface{}{
+				"timestamp": time.Now().Add(-2 * time.Minute),
+				"type":      "ScalingEvaluated",
+				"resource":  "kairos-console",
+				"namespace": "kairos-system",
+				"action":    "NoAction",
+				"detail":    "All metrics within threshold",
+				"cluster":   "hub",
+			},
 			map[string]interface{}{
 				"timestamp": time.Now().Add(-10 * time.Minute),
 				"type":      "AgentReconciled",
@@ -1465,18 +1470,39 @@ func handleClusters(w http.ResponseWriter, r *http.Request) {
 	_ = r
 	w.Header().Set("Content-Type", "application/json")
 
+	hubAgents := 0
+	if agents, err := listKairosAgents(); err == nil {
+		hubAgents = len(agents)
+	}
+	hubPolicies := 0
+	if policies, err := listSmartScalingPolicies(); err == nil {
+		hubPolicies = len(policies)
+	}
+	spokeAgentsByCluster := map[string]int{}
+	agentStore.RLock()
+	for _, report := range agentStore.agents {
+		spokeAgentsByCluster[report.Cluster]++
+	}
+	agentStore.RUnlock()
+
 	data, err := k8sGet(fmt.Sprintf("/apis/%s/%s/namespaces/kairos-system/kairosconsoles/kairos", crdGroup, crdVersion))
 	if err == nil {
 		var console k8sKairosConsole
 		if json.Unmarshal(data, &console) == nil && len(console.Spec.Clusters) > 0 {
 			var clusters []map[string]interface{}
 			for _, c := range console.Spec.Clusters {
+				agents := spokeAgentsByCluster[c.Name]
+				policies := 0
+				if c.Name == "hub" || c.Region == "local" || c.Region == "central" {
+					agents += hubAgents
+					policies = hubPolicies
+				}
 				clusters = append(clusters, map[string]interface{}{
 					"name":     c.Name,
 					"region":   c.Region,
 					"status":   "healthy",
-					"agents":   0,
-					"policies": 0,
+					"agents":   agents,
+					"policies": policies,
 					"apiURL":   c.APIURL,
 				})
 			}
@@ -1486,17 +1512,21 @@ func handleClusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode([]map[string]interface{}{
-		{"name": "hub", "region": "local", "status": "healthy", "agents": 0, "policies": 0},
+		{"name": "hub", "region": "local", "status": "healthy", "agents": hubAgents, "policies": hubPolicies},
 	})
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	totalAgents := 1
+	totalAgents := 0
 	totalPolicies := 0
 	totalEvents := 0
 	totalApprovals := 0
+
+	if agents, err := listKairosAgents(); err == nil {
+		totalAgents = len(agents)
+	}
 
 	agentStore.RLock()
 	totalAgents += len(agentStore.agents)
@@ -1519,7 +1549,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDemoMode() {
-		if totalAgents <= 1 {
+		if totalAgents == 0 {
 			totalAgents = 3
 		}
 		if totalPolicies == 0 {
@@ -1595,9 +1625,6 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	agentStore.RLock()
 	totalAgents += len(agentStore.agents)
 	agentStore.RUnlock()
-	if totalAgents == 0 {
-		totalAgents = 1
-	}
 
 	totalPolicies := 0
 	policies, err := listSmartScalingPolicies()
@@ -1619,12 +1646,14 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 			if ev.Spec.Status == "pending-approval" {
 				totalApprovals++
 			}
-			day := ev.Metadata.CreationTimestamp[:10]
-			eventsByDay[day]++
-			if ev.Spec.Status == "applied" {
-				appliedByDay[day]++
-			} else {
-				skippedByDay[day]++
+			if len(ev.Metadata.CreationTimestamp) >= 10 {
+				day := ev.Metadata.CreationTimestamp[:10]
+				eventsByDay[day]++
+				if ev.Spec.Status == "applied" {
+					appliedByDay[day]++
+				} else {
+					skippedByDay[day]++
+				}
 			}
 		}
 	}

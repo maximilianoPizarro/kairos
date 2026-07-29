@@ -171,25 +171,18 @@ spec:
     | Multi-cluster governance | Yes | No | No |
     | Dry-run mode | Yes | Yes | No |
     | Approval workflows | Yes | No | No |
-    | GitOps PR generation | Yes | No | No |
 
     ### Key Features
 
-    * **AI-Powered Recommendations** — Connects to any OpenAI-compatible API (OpenAI, Ollama, vLLM, etc.)
-    * **Server-Side Apply** — Zero-conflict resource management, fully compatible with ArgoCD
-    * **Multi-Cluster Hub-Spoke** — Central console for governance across all clusters
-    * **4 Operating Modes** — Autopilot, Supervised, GitOps, or Dry-Run
-    * **HPA/KEDA/VPA Coexistence** — Automatic detection and deferral to avoid conflicts
-    * **PinnedResources** — SRE can lock workload resources for a set duration
-    * **KairosEvent Audit Trail** — Full history of every scaling decision
-    * **Approval Workflows** — Supervised mode with approve/reject in console UI
-    * **Policy Inheritance** — Global > Cluster > Namespace scope with priority-based resolution
-    * **Cost Estimation** — Integrate with AWS/GCP/Azure pricing APIs
-    * **Notification Webhooks** — Slack, Teams, or generic webhook alerts on corrections
-    * **Predictive Scaling** — Time-series forecasting for proactive resource adjustment
-    * **GitOps Native** — Generate PRs to your infrastructure repo instead of direct patches
-    * **Grafana Dashboard** — Pre-built dashboard for operator observability
-    * **ValidatingWebhook** — Pre-apply validation prevents misconfigurations
+    * **AI-Powered Recommendations** — OpenAI-compatible APIs (LiteLLM, vLLM, Ollama, OpenAI)
+    * **Server-Side Apply** — Zero-conflict resource patches, ArgoCD-friendly
+    * **SmartScalingPolicy** — Metric and schedule rules with cooldowns and safe defaults
+    * **KairosAgent modes** — Autopilot, Supervised, and Dry-Run
+    * **Multi-Cluster Console** — PatternFly UI for agents, policies, events, approvals, and history
+    * **KairosEvent Audit Trail** — History of scaling decisions with before/after snapshots
+    * **Approval Workflows** — Supervised mode with approve/reject in the console
+    * **PinnedResources** — Lock workload resources for a set duration
+    * **Notification Webhooks** — Slack, Teams, or generic webhooks on corrections
 
     ### Architecture
 
@@ -263,6 +256,7 @@ spec:
       email: maximilianopizarro5@gmail.com
   maturity: beta
   minKubeVersion: "1.25.0"
+  replaces: kairos-operator.v2.1.1
   provider:
     name: maximilianopizarro
     url: https://github.com/maximilianoPizarro

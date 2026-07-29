@@ -3,11 +3,11 @@ kairos:
   namespace: kairos-system
   operator:
     image: quay.io/maximilianopizarro/kairos-operator
-    tag: v1.0.0
+    tag: v2.2.0
   console:
     enabled: true
     image: quay.io/maximilianopizarro/kairos-console
-    tag: v1.0.0
+    tag: v2.2.0
     route:
       host: ""  # Set to kairos.apps.<cluster-domain>
   ai:

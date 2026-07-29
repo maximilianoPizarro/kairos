@@ -12,7 +12,8 @@ spec:
     name: line-dashboard
     namespace: industrial-edge-tst
   otelEndpoint: "otel-collector.observability.svc.cluster.local:4317"
-  prometheusEndpoint: "prometheus-k8s.openshift-monitoring.svc.cluster.local:9090"
+  # OpenShift: use Thanos Querier over HTTPS (operator SA needs cluster-monitoring-view)
+  prometheusEndpoint: "https://thanos-querier.openshift-monitoring.svc.cluster.local:9091"
   rules:
   - name: high-cpu-vertical
     when:

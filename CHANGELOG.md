@@ -7,17 +7,25 @@ All notable changes to the Kairos Operator project are documented here.
 ### Bug Fixes
 - **SmartScalingPolicy infinite loop**: replaced stub metric evaluator with real Prometheus queries; rules are skipped safely when no endpoint is configured or the query fails.
 - **Cooldown is policy-wide**: any recent scaling event blocks all rules (no alternating-rule bypass).
+- **Metric `when.for`**: condition must hold for the configured duration before firing.
+- Prometheus/Thanos queries use HTTPS + in-cluster SA bearer for OpenShift monitoring endpoints.
 
 ### Console
 - Policies page shows expandable **rule details** (name, type, action, metric/threshold or cron, cooldown).
-- Agents page reads real `KairosAgent` CRs (AI model from `spec.aiModel.model`).
-- Clusters derived from `KairosConsole.spec.clusters` (fallback: single hub cluster).
-- Dashboard PatternFly charts: resource-distribution donut + 7-day scaling events area chart (`/api/v1/stats`).
-- OperatorHub Architecture section uses markdown (external PNG images are blocked by Console CSP).
+- Agents page reads real `KairosAgent` CRs including `watchedResources` / `totalCorrections`.
+- Clusters derived from `KairosConsole.spec.clusters` with real agent/policy counts.
+- Dashboard PatternFly charts (`/api/v1/stats`); no inflated agent totals.
+- Fake `/api/v1/events` seed gated behind `KAIROS_CONSOLE_DEMO_DATA=true`.
+- OperatorHub Architecture section uses markdown (external PNG images blocked by Console CSP).
+
+### Bundle / OperatorHub
+- `replaces: kairos-operator.v2.1.1`
+- CSV description trimmed to shipped capabilities
+- Samples / Helm tags aligned to `v2.2.0`
 
 ### Docs
-- Console screenshots for v2.2.0 under `docs/images/screenshots/`.
-- LiteLLM + Granite-Vision-3.2 agent sample.
+- Console screenshots on GitHub Pages (real-data screens only).
+- OpenAI-compatible agent sample with placeholders (no credentials in git).
 
 ## [v2.0.2] - 2026-06-02
 

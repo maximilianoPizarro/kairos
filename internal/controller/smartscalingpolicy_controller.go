@@ -18,14 +18,18 @@ package controller
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -51,7 +55,12 @@ const (
 	evaluationInterval   = 30 * time.Second
 	errorRequeueInterval = 1 * time.Minute
 	maxRecentEvents      = 10
+	saTokenPath          = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	saCAPath             = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 )
+
+// ruleConditionSince tracks when each metric rule first became true (for `when.for`).
+var ruleConditionSince sync.Map
 
 // SmartScalingPolicyReconciler reconciles a SmartScalingPolicy object.
 type SmartScalingPolicyReconciler struct {
@@ -377,26 +386,65 @@ func ruleEnabled(enabled *bool) bool {
 	return enabled == nil || *enabled
 }
 
+func normalizePrometheusEndpoint(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return ""
+	}
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		return strings.TrimRight(endpoint, "/")
+	}
+	// OpenShift monitoring services require HTTPS + SA bearer token.
+	if strings.Contains(endpoint, "openshift-monitoring") || strings.Contains(endpoint, "thanos-querier") {
+		return "https://" + endpoint
+	}
+	return "http://" + endpoint
+}
+
+func prometheusHTTPClient(baseURL string) *http.Client {
+	client := &http.Client{Timeout: 10 * time.Second}
+	if !strings.HasPrefix(baseURL, "https://") {
+		return client
+	}
+
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if caPEM, err := os.ReadFile(saCAPath); err == nil {
+		pool := x509.NewCertPool()
+		if pool.AppendCertsFromPEM(caPEM) {
+			tlsConfig.RootCAs = pool
+		} else {
+			tlsConfig.InsecureSkipVerify = true
+		}
+	} else {
+		// Outside a cluster (unit tests / local run) fall back to system CAs,
+		// and allow insecure verify only when SA CA is unavailable in-cluster paths.
+		tlsConfig.InsecureSkipVerify = true
+	}
+	client.Transport = &http.Transport{TLSClientConfig: tlsConfig}
+	return client
+}
+
 // queryPrometheus performs a PromQL instant query against the configured endpoint.
-// Returns (value, nil) on success, or (0, error) if unreachable or no data.
+// For HTTPS / OpenShift monitoring endpoints it attaches the in-cluster SA bearer token.
 func queryPrometheus(ctx context.Context, endpoint, promQL string) (float64, error) {
 	if endpoint == "" {
 		return 0, fmt.Errorf("no prometheus endpoint configured")
 	}
 
-	base := endpoint
-	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
-		base = "http://" + base
-	}
-
+	base := normalizePrometheusEndpoint(endpoint)
 	queryURL := base + "/api/v1/query?" + url.Values{"query": {promQL}}.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, queryURL, nil)
 	if err != nil {
 		return 0, fmt.Errorf("create request: %w", err)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+	if strings.HasPrefix(base, "https://") {
+		if token, err := os.ReadFile(saTokenPath); err == nil {
+			req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(token)))
+		}
+	}
+
+	resp, err := prometheusHTTPClient(base).Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("query prometheus: %w", err)
 	}
@@ -435,26 +483,62 @@ func queryPrometheus(ctx context.Context, endpoint, promQL string) (float64, err
 	return strconv.ParseFloat(valueStr, 64)
 }
 
+func conditionKey(policy *kairosv1alpha1.SmartScalingPolicy, ruleName string) string {
+	return policy.Namespace + "/" + policy.Name + "/" + ruleName
+}
+
+// conditionHeldFor reports whether a metric condition has stayed true for the configured duration.
+func conditionHeldFor(key, forDuration string, now time.Time, matches bool) bool {
+	if !matches {
+		ruleConditionSince.Delete(key)
+		return false
+	}
+	if forDuration == "" {
+		return true
+	}
+	forDur, err := time.ParseDuration(forDuration)
+	if err != nil || forDur <= 0 {
+		return true
+	}
+	actual, loaded := ruleConditionSince.LoadOrStore(key, now)
+	if !loaded {
+		return false
+	}
+	since, ok := actual.(time.Time)
+	if !ok {
+		ruleConditionSince.Store(key, now)
+		return false
+	}
+	return !now.Before(since.Add(forDur))
+}
+
 func (r *SmartScalingPolicyReconciler) evaluateMetricRule(
 	ctx context.Context,
 	policy *kairosv1alpha1.SmartScalingPolicy,
 	rule kairosv1alpha1.ScalingRule,
 ) (bool, error) {
 	log := logf.FromContext(ctx)
+	key := conditionKey(policy, rule.Name)
 
 	promEndpoint := policy.Spec.PrometheusEndpoint
 	if promEndpoint == "" {
 		log.V(1).Info("No prometheus endpoint configured, skipping metric rule", "rule", rule.Name)
+		ruleConditionSince.Delete(key)
 		return false, nil
 	}
 
 	value, err := queryPrometheus(ctx, promEndpoint, rule.When.Metric)
 	if err != nil {
 		log.Info("Prometheus query failed, skipping rule (safe default)", "rule", rule.Name, "error", err.Error())
+		ruleConditionSince.Delete(key)
 		return false, nil
 	}
 
-	return compareMetric(value, rule.When.Operator, rule.When.Threshold)
+	matches, err := compareMetric(value, rule.When.Operator, rule.When.Threshold)
+	if err != nil {
+		return false, err
+	}
+	return conditionHeldFor(key, rule.When.For, time.Now(), matches), nil
 }
 
 func compareMetric(value float64, operator kairosv1alpha1.ComparisonOperator, threshold string) (bool, error) {

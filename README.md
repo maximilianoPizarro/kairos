@@ -121,41 +121,74 @@ spec:
       type: AddReplicas
 ```
 
+## Console Screenshots (v2.2.0)
+
+Captured against a live OpenShift local (CRC) install with real CRs — no mock data.
+
+| Screen | What you see |
+|---|---|
+| ![Dashboard](docs/images/screenshots/01-dashboard.png) | Operator status, PatternFly donut + 7-day scaling trend, dynamic cluster count |
+| ![AI Agents](docs/images/screenshots/02-agents.png) | Real `KairosAgent` CRs with model name from `spec.aiModel.model` |
+| ![Policies](docs/images/screenshots/03-policies.png) | SmartScalingPolicy list with expandable rule counts |
+| ![Rules detail](docs/images/screenshots/03b-policies-rules-expanded.png) | Per-rule metric/schedule, action type, threshold and cooldown |
+| ![Managed Resources](docs/images/screenshots/06-resources.png) | Workloads annotated with `kairos.io/managed: "true"` |
+
+More screens: [Events](docs/images/screenshots/04-events.png) · [Observability](docs/images/screenshots/05-observability.png) · [Approvals](docs/images/screenshots/07-approvals.png) · [History](docs/images/screenshots/08-history.png) · [Diff View](docs/images/screenshots/09-diffview.png)
+
 ## AI Model Configuration
 
-Create a secret with your API key:
+Create a secret with your API key (never commit the key):
 
 ```bash
 oc create secret generic kairos-ai-credentials \
   -n kairos-system \
-  --from-literal=api-key=<your-api-key>
+  --from-literal=api-key='<your-api-key>'
 ```
 
-Configure the KairosAgent:
+Example agent using **LiteLLM** with **Granite-Vision-3.2** (OpenAI-compatible `/v1`):
 
 ```yaml
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
-  name: my-agent
+  name: hub-agent
+  namespace: kairos-system
 spec:
-  mode: autopilot          # or "supervised" for human approval
+  mode: supervised          # or "autopilot"
   aiModel:
-    apiURL: "https://litellm-prod.apps.maas.redhatworkshops.io/v1/chat/completions"
-    model: "deepseek-r1-distill-qwen-14b"
-    secretRef:
+    apiURL: "https://litellm-litemaas.apps.prod.rhoai.rh-aiservices-bu.com/v1"
+    model: "Granite-Vision-3.2"
+    apiKeySecret:
       name: kairos-ai-credentials
       key: api-key
+    timeoutSeconds: 60
+    temperature: "0.2"
   watch:
-    namespaceSuffix: "-prod"
+    namespaces:
+    - kairos-system
+    - kairos-demo
     resourceTypes:
     - Deployment
-    - StatefulSet
+    labelSelector: "kairos.io/managed=true"
   correctionPolicy:
     maxActionsPerHour: 10
+    requireApprovalAbove: "30%"
     rollbackOnFailure: true
+    dryRun: true            # safe for demos / screenshots
   reporting:
-    interval: "5m"
+    interval: "30s"
+```
+
+Verify the model endpoint before creating the agent:
+
+```bash
+curl -X POST "$LITELLM_URL/chat/completions" \
+  -H "Authorization: Bearer $LITELLM_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Granite-Vision-3.2",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
 ```
 
 Supported AI endpoints: vLLM, KServe, LiteLLM, Ollama, OpenAI-compatible APIs.
@@ -196,7 +229,7 @@ cd kairos
 make install
 
 # Deploy the operator (uses kustomize)
-make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v2.0.0
+make deploy IMG=quay.io/maximilianopizarro/kairos-operator:v2.2.0
 
 # Verify the operator is running
 oc get pods -n kairos-system
@@ -250,8 +283,8 @@ oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
 
 # Check agent status
 oc get kairosagents -n kairos-system
-# NAME         MODE        AI MODEL                        PHASE    WATCHED
-# hub-agent    supervised  deepseek-r1-distill-qwen-14b    Active   8
+# NAME         MODE         PHASE    DRYRUN   AGE
+# hub-agent    supervised   Active   true     30s
 ```
 
 ### Deploy the Governance Console
@@ -298,12 +331,12 @@ All images are built on Red Hat Universal Base Images (UBI9) for security and co
 Pull images:
 ```bash
 # From Quay.io
-podman pull quay.io/maximilianopizarro/kairos-operator:v2.0.0
-podman pull quay.io/maximilianopizarro/kairos-console:v0.1.3
+podman pull quay.io/maximilianopizarro/kairos-operator:v2.2.0
+podman pull quay.io/maximilianopizarro/kairos-console:v2.2.0
 
 # From GitHub Container Registry
-podman pull ghcr.io/maximilianopizarro/kairos-operator:v2.0.0
-podman pull ghcr.io/maximilianopizarro/kairos-console:v0.1.3
+podman pull ghcr.io/maximilianopizarro/kairos-operator:v2.2.0
+podman pull ghcr.io/maximilianopizarro/kairos-console:v2.2.0
 ```
 
 ## CRDs
@@ -381,7 +414,7 @@ gofmt -w .
 
 Full documentation available at: **https://maximilianoPizarro.github.io/kairos**
 
-The documentation covers:
+- [Console v2.2.0 screenshots & LiteLLM agent](docs/console-v2.2.0.md)
 - Multi-cluster configuration (hub-spoke topology)
 - Observability setup (OpenTelemetry + Thanos)
 - AI model integration

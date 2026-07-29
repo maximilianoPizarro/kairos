@@ -1,92 +1,39 @@
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
-  name: agent-production
+  name: hub-agent
   namespace: kairos-system
   labels:
     app.kubernetes.io/managed-by: kairos-operator
 spec:
   mode: supervised
   aiModel:
-    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
-    model: "granite-31-8b"
+    # OpenAI-compatible base URL (Kairos appends /chat/completions)
+    apiURL: "https://litellm-litemaas.apps.prod.rhoai.rh-aiservices-bu.com/v1"
+    model: "Granite-Vision-3.2"
     apiKeySecret:
       name: kairos-ai-credentials
-      key: token
+      key: api-key
     timeoutSeconds: 60
-    temperature: "0.3"
+    temperature: "0.2"
   watch:
-    # Option A: Explicit namespace list
     namespaces:
-    - industrial-edge-tst
-    - factory-kafka
-    # Option B: Watch all namespaces ending with suffix (e.g. myapp-prod, orders-prod)
-    namespaceSuffix: "-prod"
+    - kairos-system
+    - kairos-demo
     resourceTypes:
     - Deployment
     - StatefulSet
     labelSelector: "kairos.io/managed=true"
   correctionPolicy:
     maxActionsPerHour: 10
-    requireApprovalAbove: "50%"
+    requireApprovalAbove: "30%"
     rollbackOnFailure: true
-    dryRun: false
+    dryRun: true
   reporting:
     interval: "30s"
     otelExport: true
   paused: false
 ---
-apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
-kind: KairosAgent
-metadata:
-  name: agent-dev-environments
-  namespace: kairos-system
-  labels:
-    app.kubernetes.io/managed-by: kairos-operator
-spec:
-  mode: autopilot
-  aiModel:
-    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
-    model: "granite-31-8b"
-    apiKeySecret:
-      name: kairos-ai-credentials
-      key: token
-    timeoutSeconds: 30
-  watch:
-    namespaces: []
-    namespaceSuffix: "-dev"
-    resourceTypes:
-    - Deployment
-  correctionPolicy:
-    maxActionsPerHour: 50
-    rollbackOnFailure: true
-    dryRun: false
-  reporting:
-    interval: "60s"
-  paused: false
----
-apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
-kind: KairosAgent
-metadata:
-  name: agent-qa-environments
-  namespace: kairos-system
-spec:
-  mode: supervised
-  aiModel:
-    apiURL: "https://isvc-granite-31-8b-fp8-predictor.sandbox-shared-models.svc.cluster.local:8443/v1/chat/completions"
-    model: "granite-31-8b"
-    apiKeySecret:
-      name: kairos-ai-credentials
-      key: token
-  watch:
-    namespaces: []
-    namespaceSuffix: "-qa"
-    resourceTypes:
-    - Deployment
-    - StatefulSet
-  correctionPolicy:
-    maxActionsPerHour: 20
-    requireApprovalAbove: "30%"
-    rollbackOnFailure: true
-  reporting:
-    interval: "45s"
+# Create credentials first:
+#   oc create secret generic kairos-ai-credentials -n kairos-system \
+#     --from-literal=api-key='<your-litellm-or-openai-key>'

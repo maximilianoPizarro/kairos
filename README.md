@@ -123,7 +123,10 @@ spec:
 
 ## Console Screenshots (v2.2.0)
 
-Captured against a live OpenShift local (CRC) install with real CRs — no mock data.
+Published on **[GitHub Pages → Console v2.2.0](https://maximilianoPizarro.github.io/kairos/)**.
+
+Only screens with real data are shown (Dashboard, AI Agents, Scaling Policies + rules, Managed Resources).
+Observability / Approvals / History / Diff View are omitted while empty or disconnected.
 
 | Screen | What you see |
 |---|---|
@@ -132,8 +135,6 @@ Captured against a live OpenShift local (CRC) install with real CRs — no mock 
 | ![Policies](docs/images/screenshots/03-policies.png) | SmartScalingPolicy list with expandable rule counts |
 | ![Rules detail](docs/images/screenshots/03b-policies-rules-expanded.png) | Per-rule metric/schedule, action type, threshold and cooldown |
 | ![Managed Resources](docs/images/screenshots/06-resources.png) | Workloads annotated with `kairos.io/managed: "true"` |
-
-More screens: [Events](docs/images/screenshots/04-events.png) · [Observability](docs/images/screenshots/05-observability.png) · [Approvals](docs/images/screenshots/07-approvals.png) · [History](docs/images/screenshots/08-history.png) · [Diff View](docs/images/screenshots/09-diffview.png)
 
 ## AI Model Configuration
 

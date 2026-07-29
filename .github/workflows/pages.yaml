@@ -26,11 +26,14 @@ jobs:
 
     - name: Build documentation site
       run: |
-        mkdir -p _site/images
+        mkdir -p _site/images/screenshots
         cp docs/pages/index.html _site/
         cp -r docs/pages/images/* _site/images/ 2>/dev/null || true
         cp -r docs/images/* _site/images/ 2>/dev/null || true
+        # Prefer pages-local screenshot copies (v2.2.0 gallery)
+        cp -r docs/pages/images/screenshots/* _site/images/screenshots/ 2>/dev/null || true
         cp docs/argocd-coexistence.md _site/ 2>/dev/null || true
+        cp docs/console-v2.2.0.md _site/ 2>/dev/null || true
         cp README.md _site/
 
     - name: Upload artifact

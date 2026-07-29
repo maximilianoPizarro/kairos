@@ -225,6 +225,7 @@
 <div class="container">
   <div class="nav-tabs">
     <a class="nav-tab active" onclick="showSection('overview')">Overview</a>
+    <a class="nav-tab" onclick="showSection('console')">Console v2.2.0</a>
     <a class="nav-tab" onclick="showSection('problem')">The Problem</a>
     <a class="nav-tab" onclick="showSection('multicluster')">Multi-cluster</a>
     <a class="nav-tab" onclick="showSection('observability')">Observability</a>
@@ -340,10 +341,52 @@
       <div class="img-caption">Click to enlarge — From metrics ingestion to scaling action with safety gates</div>
     </div>
 
-    <h2>Console: Dashboard</h2>
+    <h2>Console v2.2.0 (preview)</h2>
+    <p style="color:#8b949e;">Live screenshots from OpenShift local — see the <a href="#" onclick="showSection('console'); return false;" style="color:#00e5ff;">Console v2.2.0</a> tab for the full gallery.</p>
     <div class="img-container" onclick="openLightbox(this)">
-      <img src="images/screenshot-console-dashboard.png" alt="Kairos Console Dashboard">
-      <div class="img-caption">Click to enlarge — Live console showing multi-cluster governance: agents, policies, and real-time events</div>
+      <img src="images/screenshots/01-dashboard.png" alt="Kairos Console Dashboard v2.2.0">
+      <div class="img-caption">Click to enlarge — Dashboard with PatternFly charts, operator v2.2.0, and real CR counts</div>
+    </div>
+  </div>
+
+  <!-- CONSOLE v2.2.0 -->
+  <div id="console" class="section">
+    <h2>Console Screenshots — v2.2.0</h2>
+    <p style="font-size: 1.05rem; line-height: 1.7; color: #c9d1d9;">
+      Captured against a live OpenShift local (CRC) install with real CRs — no mock data.
+      Agent uses an OpenAI-compatible model endpoint; policies and managed Deployments are real cluster objects.
+    </p>
+    <div class="alert" style="border-left: 3px solid #00e5ff; background: #161b22; padding: 0.75rem 1rem; margin: 1rem 0;">
+      <strong>What's shown:</strong> only screens with real data (Dashboard, AI Agents, Scaling Policies, Managed Resources).
+      Observability / Approvals / History / Diff View are omitted here when empty or disconnected — those screens fill once Thanos/monitoring and KairosEvents are available.
+    </div>
+
+    <h3>Dashboard</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/01-dashboard.png" alt="Dashboard v2.2.0">
+      <div class="img-caption">Operator status, PatternFly donut (resource distribution), 7-day scaling trend, dynamic cluster count</div>
+    </div>
+
+    <h3>AI Agents</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/02-agents.png" alt="AI Agents v2.2.0">
+      <div class="img-caption">Real KairosAgent CR — model name from <code>spec.aiModel.model</code> (Granite-Vision-3.2)</div>
+    </div>
+
+    <h3>Scaling Policies</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/03-policies.png" alt="Scaling Policies v2.2.0">
+      <div class="img-caption">SmartScalingPolicy list with expandable rule counts</div>
+    </div>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/03b-policies-rules-expanded.png" alt="Policy rules expanded v2.2.0">
+      <div class="img-caption">Per-rule metric/schedule, action type, threshold and cooldown</div>
+    </div>
+
+    <h3>Managed Resources</h3>
+    <div class="img-container" onclick="openLightbox(this)">
+      <img src="images/screenshots/06-resources.png" alt="Managed Resources v2.2.0">
+      <div class="img-caption">Workloads annotated with <code>kairos.io/managed: "true"</code> across the hub cluster</div>
     </div>
   </div>
 

@@ -615,21 +615,21 @@ func (r *KairosConsoleReconciler) reconcileConsoleRBAC(ctx context.Context, cons
 			{
 				APIGroups: []string{"kairos.maximilianopizarro.github.io"},
 				Resources: []string{
-					"smartscalingpolicies", "smartscalingpolicies/status",
-					"kairosagents", "kairosagents/status",
-					"kairosevents", "kairosevents/status",
-					"kairosconsoles", "kairosconsoles/status",
+					"smartscalingpolicies",
+					"kairosagents",
+					"kairosevents",
+					"kairosconsoles",
 				},
 				Verbs: []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{"apps"},
-				Resources: []string{"deployments", "deployments/status", "statefulsets", "statefulsets/status"},
+				Resources: []string{"deployments", "statefulsets"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 			{
 				APIGroups: []string{""},
-				Resources: []string{"namespaces", "pods", "pods/status"},
+				Resources: []string{"namespaces", "pods"},
 				Verbs:     []string{"get", "list", "watch"},
 			},
 		},

@@ -9,7 +9,8 @@ spec:
   mode: supervised
   aiModel:
     # OpenAI-compatible base URL (Kairos appends /chat/completions)
-    apiURL: "https://litellm-litemaas.apps.prod.rhoai.rh-aiservices-bu.com/v1"
+    # Example: https://<your-litellm-or-vllm-host>/v1
+    apiURL: "https://<your-openai-compatible-endpoint>/v1"
     model: "Granite-Vision-3.2"
     apiKeySecret:
       name: kairos-ai-credentials
@@ -34,6 +35,6 @@ spec:
     otelExport: true
   paused: false
 ---
-# Create credentials first:
+# Credentials must NEVER be committed. Create them locally only:
 #   oc create secret generic kairos-ai-credentials -n kairos-system \
-#     --from-literal=api-key='<your-litellm-or-openai-key>'
+#     --from-literal=api-key="$LITELLM_API_KEY"

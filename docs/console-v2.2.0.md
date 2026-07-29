@@ -42,10 +42,17 @@ Expandable rule list with metric PromQL, operator/threshold, action type, and co
 
 ## Configure agent with LiteLLM (Granite-Vision-3.2)
 
-```bash
-oc create secret generic kairos-ai-credentials -n kairos-system \
-  --from-literal=api-key='<your-api-key>'
+Credentials stay local — never commit them and never bake them into the operator/bundle version.
 
+```bash
+# Export in your shell only
+export LITELLM_URL='https://<your-litellm-host>/v1'
+export LITELLM_API_KEY='<your-api-key>'
+
+oc create secret generic kairos-ai-credentials -n kairos-system \
+  --from-literal=api-key="$LITELLM_API_KEY"
+
+# Edit sample apiURL to $LITELLM_URL, then:
 oc apply -f config/samples/kairos_v1alpha1_kairosagent.yaml
 
 oc get kairosagents -n kairos-system
@@ -54,8 +61,8 @@ oc get kairosagents -n kairos-system
 Smoke-test the model:
 
 ```bash
-curl -X POST "https://litellm-litemaas.apps.prod.rhoai.rh-aiservices-bu.com/v1/chat/completions" \
-  -H "Authorization: Bearer $LITELLM_API_KEY" \
+curl -X POST "${LITELLM_URL}/chat/completions" \
+  -H "Authorization: Bearer ${LITELLM_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Granite-Vision-3.2",

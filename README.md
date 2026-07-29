@@ -145,7 +145,7 @@ oc create secret generic kairos-ai-credentials \
   --from-literal=api-key='<your-api-key>'
 ```
 
-Example agent using **LiteLLM** with **Granite-Vision-3.2** (OpenAI-compatible `/v1`):
+Example agent using an OpenAI-compatible endpoint (LiteLLM / vLLM / Ollama) with **Granite-Vision-3.2**:
 
 ```yaml
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
@@ -156,7 +156,7 @@ metadata:
 spec:
   mode: supervised          # or "autopilot"
   aiModel:
-    apiURL: "https://litellm-litemaas.apps.prod.rhoai.rh-aiservices-bu.com/v1"
+    apiURL: "https://<your-openai-compatible-endpoint>/v1"
     model: "Granite-Vision-3.2"
     apiKeySecret:
       name: kairos-ai-credentials
@@ -179,11 +179,11 @@ spec:
     interval: "30s"
 ```
 
-Verify the model endpoint before creating the agent:
+Verify the model endpoint before creating the agent (export URL/key in your shell; do not put them in git):
 
 ```bash
-curl -X POST "$LITELLM_URL/chat/completions" \
-  -H "Authorization: Bearer $LITELLM_API_KEY" \
+curl -X POST "${LITELLM_URL}/chat/completions" \
+  -H "Authorization: Bearer ${LITELLM_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "Granite-Vision-3.2",

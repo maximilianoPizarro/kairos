@@ -2,7 +2,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-applied-1
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   action: decrease_resources
   after:
@@ -25,7 +25,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-dry-run-1
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   action: scale_down
   after:
@@ -38,7 +38,7 @@ spec:
     memory: 128Mi
     replicas: '2'
   cluster: hub
-  namespace: kairos-system
+  namespace: kairos-demo
   reason: 'Dry-run: would remove 1 replica'
   resource: demo-app
   status: dry-run
@@ -47,7 +47,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-pending-approval-1
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   action: scale_up
   after:
@@ -60,7 +60,7 @@ spec:
     memory: 128Mi
     replicas: '2'
   cluster: hub
-  namespace: kairos-system
+  namespace: kairos-demo
   policyName: demo-scaling-policy
   reason: AI recommended +1 replica (CPU > 70%)
   resource: demo-app

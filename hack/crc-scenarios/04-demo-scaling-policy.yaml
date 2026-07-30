@@ -2,7 +2,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: SmartScalingPolicy
 metadata:
   name: demo-scaling-policy
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   paused: false
   prometheusEndpoint: ''
@@ -15,7 +15,7 @@ spec:
     name: high-cpu-scale-up
     when:
       for: 1m
-      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-system',pod=~'demo-app.*'}[5m]))
+      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-demo',pod=~'demo-app.*'}[5m]))
       operator: GreaterThan
       threshold: '0.01'
   - action:
@@ -26,7 +26,7 @@ spec:
     name: low-cpu-scale-down
     when:
       for: 1m
-      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-system',pod=~'demo-app.*'}[5m]))
+      metric: avg(rate(container_cpu_usage_seconds_total{namespace='kairos-demo',pod=~'demo-app.*'}[5m]))
       operator: LessThan
       threshold: '0.9'
   schedule:
@@ -40,4 +40,4 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: demo-app
-    namespace: kairos-system
+    namespace: kairos-demo

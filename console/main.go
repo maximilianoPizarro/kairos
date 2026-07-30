@@ -950,7 +950,7 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		for _, ev := range events {
 			if ev.Metadata.UID == id {
-				if ev.Spec.Status != "pending-approval" {
+				if ev.Spec.Status != "pending-approval" && !(action == "approve" && ev.Spec.Status == "failed") {
 					http.Error(w, `{"error":"event is not pending-approval"}`, http.StatusConflict)
 					return
 				}

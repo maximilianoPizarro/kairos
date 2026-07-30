@@ -2,7 +2,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosAgent
 metadata:
   name: hub-agent
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   aiModel:
     apiURL: https://<your-openai-compatible-endpoint>/v1
@@ -20,7 +20,6 @@ spec:
   watch:
     labelSelector: kairos.io/managed=true
     namespaces:
-    - kairos-system
     - kairos-demo
     resourceTypes:
     - Deployment

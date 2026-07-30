@@ -3,13 +3,13 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-shot-pending-1
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   agentName: hub-agent
   cluster: hub
   action: scale_up
   resource: demo-app
-  namespace: kairos-system
+  namespace: kairos-demo
   policyName: demo-scaling-policy
   reason: "CPU > 70% for 5m — recommend +1 replica"
   status: pending-approval
@@ -27,7 +27,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-shot-pending-2
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   agentName: hub-agent
   cluster: hub
@@ -51,7 +51,7 @@ apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
 kind: KairosEvent
 metadata:
   name: evt-shot-applied-mem
-  namespace: kairos-system
+  namespace: kairos-demo
 spec:
   agentName: hub-agent
   cluster: hub

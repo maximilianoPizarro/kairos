@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: demo-app
-  namespace: kairos-system
+  namespace: kairos-demo
   labels:
     app: demo-app
     kairos.io/managed: 'true'

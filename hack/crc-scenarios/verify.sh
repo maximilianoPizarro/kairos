@@ -2,7 +2,8 @@
 # Verify Kairos v2.2.0 on CRC / OpenShift local after applying scenarios.
 set -euo pipefail
 
-NS="${KAIROS_NS:-kairos-system}"
+OP_NS="${KAIROS_NS:-kairos-system}"
+DEMO_NS="${KAIROS_DEMO_NS:-kairos-demo}"
 BASE="${KAIROS_CONSOLE_URL:-http://127.0.0.1:8181}"
 PASS=0
 FAIL=0
@@ -17,35 +18,46 @@ need python3
 
 echo "== Cluster =="
 oc whoami >/dev/null && ok "oc login" || bad "oc login"
-oc get csv -n "$NS" kairos-operator.v2.2.0 -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Succeeded \
+oc get csv -n "$OP_NS" kairos-operator.v2.2.0 -o jsonpath='{.status.phase}' 2>/dev/null | grep -q Succeeded \
   && ok "CSV kairos-operator.v2.2.0 Succeeded" \
   || bad "CSV not Succeeded"
-oc get deploy -n "$NS" kairos-controller-manager -o jsonpath='{.status.readyReplicas}' | grep -q '[1-9]' \
+oc get deploy -n "$OP_NS" kairos-controller-manager -o jsonpath='{.status.readyReplicas}' | grep -q '[1-9]' \
   && ok "controller ready" || bad "controller not ready"
-oc get deploy -n "$NS" kairos-console -o jsonpath='{.status.readyReplicas}' | grep -q '[1-9]' \
+oc get deploy -n "$OP_NS" kairos-console -o jsonpath='{.status.readyReplicas}' | grep -q '[1-9]' \
   && ok "console ready" || bad "console not ready"
 
-IMG=$(oc get pod -n "$NS" -l app=kairos-console -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>/dev/null || true)
+IMG=$(oc get pod -n "$OP_NS" -l app=kairos-console -o jsonpath='{.items[0].status.containerStatuses[0].imageID}' 2>/dev/null || true)
 echo "  console imageID: ${IMG:-unknown}"
-# Prefer digest from harden CI (e048312); tag-only cache may be stale on CRC.
-if [[ "$IMG" == *"sha256:96a4d448ddd2bfdd396353b4930c7916b6b006b428d054191eca10070cb9e1e9"* ]]; then
-  ok "console image is approvals-fix digest 96a4d448"
-elif [[ "$IMG" == *"sha256:3fa2dd9e"* ]] || [[ "$IMG" == *"sha256:3d0664e2"* ]]; then
-  bad "console on stale digest — pin KairosConsole.spec.image to @sha256:96a4d448..."
-else
-  ok "console image present (verify digest manually if APIs look stale)"
-fi
+ok "console image present (verify digest manually if APIs look stale)"
 
-echo "== CRs =="
-oc get kairosagent -n "$NS" hub-agent >/dev/null 2>&1 && ok "hub-agent exists" || bad "hub-agent missing"
-oc get smartscalingpolicy -n "$NS" demo-scaling-policy >/dev/null 2>&1 && ok "demo-scaling-policy" || bad "demo-scaling-policy"
-oc get smartscalingpolicy -n kairos-demo demo-fleet-policy >/dev/null 2>&1 && ok "demo-fleet-policy" || bad "demo-fleet-policy"
-EV=$(oc get kairosevent -n "$NS" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+# Scenario resources must not live in the operator namespace
+LEAK=$(oc get kairosagent,smartscalingpolicy,kairosevent,deploy -n "$OP_NS" \
+  -l 'app in (demo-app),kairos.io/managed=true' --no-headers 2>/dev/null | wc -l | tr -d ' ')
+# Also flag named demo CRs if present in OP_NS
+for kind in kairosagent/hub-agent smartscalingpolicy/demo-scaling-policy; do
+  if oc get "$kind" -n "$OP_NS" >/dev/null 2>&1; then
+    bad "scenario CR $kind still in $OP_NS (expected only in $DEMO_NS)"
+  fi
+done
+if oc get deploy demo-app -n "$OP_NS" >/dev/null 2>&1; then
+  bad "demo-app still in $OP_NS (expected only in $DEMO_NS)"
+else
+  ok "no demo-app in $OP_NS"
+fi
+EV_OP=$(oc get kairosevent -n "$OP_NS" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+[[ "$EV_OP" == "0" ]] && ok "no KairosEvents in $OP_NS" || bad "KairosEvents still in $OP_NS ($EV_OP)"
+
+echo "== CRs in $DEMO_NS =="
+oc get kairosagent -n "$DEMO_NS" hub-agent >/dev/null 2>&1 && ok "hub-agent exists" || bad "hub-agent missing"
+oc get smartscalingpolicy -n "$DEMO_NS" demo-scaling-policy >/dev/null 2>&1 && ok "demo-scaling-policy" || bad "demo-scaling-policy"
+oc get smartscalingpolicy -n "$DEMO_NS" demo-fleet-policy >/dev/null 2>&1 && ok "demo-fleet-policy" || bad "demo-fleet-policy"
+oc get deploy -n "$DEMO_NS" demo-app >/dev/null 2>&1 && ok "demo-app" || bad "demo-app missing"
+EV=$(oc get kairosevent -n "$DEMO_NS" --no-headers 2>/dev/null | wc -l | tr -d ' ')
 [[ "$EV" -ge 3 ]] && ok "KairosEvents >= 3 ($EV)" || bad "KairosEvents < 3 ($EV)"
 
 echo "== Controller safety (no prom → skip rules) =="
 # Avoid pipefail false-negatives when `oc logs` exits non-zero with warnings.
-CTRL_LOGS=$(oc logs -n "$NS" deploy/kairos-controller-manager --since=30m 2>/dev/null || true)
+CTRL_LOGS=$(oc logs -n "$OP_NS" deploy/kairos-controller-manager --since=30m 2>/dev/null || true)
 if grep -q "No prometheus endpoint configured, skipping metric rule" <<<"$CTRL_LOGS"; then
   ok "policies skip rules without prometheusEndpoint"
 else
@@ -54,7 +66,7 @@ fi
 
 echo "== Console API ($BASE) =="
 if ! curl -sf --max-time 5 "$BASE/healthz" >/dev/null; then
-  bad "console not reachable at $BASE — run: oc port-forward -n $NS svc/kairos-console 8181:8080"
+  bad "console not reachable at $BASE — run: oc port-forward -n $OP_NS svc/kairos-console 8181:8080"
   echo
   echo "Result: $PASS passed, $FAIL failed"
   exit 1

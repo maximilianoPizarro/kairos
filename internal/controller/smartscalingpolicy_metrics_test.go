@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,7 +68,7 @@ func TestQueryPrometheusSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	val, err := queryPrometheus(context.Background(), srv.URL, "up")
+	val, err := queryPrometheus(context.Background(), srv.URL, "up", nil, nil)
 	if err != nil {
 		t.Fatalf("queryPrometheus error: %v", err)
 	}
@@ -88,10 +89,59 @@ func TestQueryPrometheusEmptyResult(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, err := queryPrometheus(context.Background(), srv.URL, "up")
+	_, err := queryPrometheus(context.Background(), srv.URL, "up", nil, nil)
 	if err == nil {
 		t.Fatal("expected error for empty result")
 	}
+}
+
+func TestQueryPrometheusInsecureSkipVerify(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"data": map[string]interface{}{
+				"resultType": "vector",
+				"result": []map[string]interface{}{
+					{"value": []interface{}{1.0, "1.25"}},
+				},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	_, err := queryPrometheus(context.Background(), srv.URL, "up", nil, nil)
+	if err == nil {
+		t.Fatal("expected TLS verify failure without insecureSkipVerify")
+	}
+
+	val, err := queryPrometheus(context.Background(), srv.URL, "up", &kairosv1alpha1.TLSConfig{InsecureSkipVerify: true}, nil)
+	if err != nil {
+		t.Fatalf("insecureSkipVerify should allow query: %v", err)
+	}
+	if val != 1.25 {
+		t.Fatalf("got %v want 1.25", val)
+	}
+}
+
+func TestPrometheusHTTPClientHonorsCA(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	der := srv.TLS.Certificates[0].Certificate[0]
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+
+	client := prometheusHTTPClient(srv.URL, nil, caPEM)
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("CA PEM should trust test server: %v", err)
+	}
+	_ = resp.Body.Close()
 }
 
 func TestInCooldownPolicyWide(t *testing.T) {

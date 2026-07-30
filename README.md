@@ -97,7 +97,21 @@ spec:
 
 ### Using Thanos Querier (OpenShift built-in)
 
-OpenShift clusters include Thanos Querier by default. No additional installation required:
+OpenShift clusters include Thanos Querier by default. Grant metrics RBAC once:
+
+```bash
+oc create clusterrolebinding kairos-console-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-console
+
+oc create clusterrolebinding kairos-controller-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-controller-manager
+```
+
+Then reference Thanos in your SmartScalingPolicy. The Querier serves a
+service-serving certificate, so set `metricsTLS.insecureSkipVerify: true`
+(or supply `metricsTLS.caSecretRef` with the OpenShift service CA):
 
 ```yaml
 apiVersion: kairos.maximilianopizarro.github.io/v1alpha1
@@ -111,6 +125,8 @@ spec:
     name: my-app
     namespace: my-namespace
   prometheusEndpoint: "https://thanos-querier.openshift-monitoring.svc:9091"
+  metricsTLS:
+    insecureSkipVerify: true
   rules:
   - name: cpu-high
     when:
@@ -217,6 +233,7 @@ Available suffix patterns: `-dev`, `-test`, `-qa`, `-prod` (or any custom suffix
 - Cluster admin access
 - Red Hat build of OpenTelemetry (recommended, available via OperatorHub)
 - Thanos Querier (included by default in OpenShift monitoring stack)
+- On OpenShift: `cluster-monitoring-view` bindings for console + controller SAs (see [Using Thanos Querier](#using-thanos-querier-openshift-built-in))
 - (Optional) AI model endpoint for autopilot mode
 
 ### Install

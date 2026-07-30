@@ -401,32 +401,63 @@ func normalizePrometheusEndpoint(endpoint string) string {
 	return "http://" + endpoint
 }
 
-func prometheusHTTPClient(baseURL string) *http.Client {
+func prometheusHTTPClient(baseURL string, metricsTLS *kairosv1alpha1.TLSConfig, caPEM []byte) *http.Client {
 	client := &http.Client{Timeout: 10 * time.Second}
 	if !strings.HasPrefix(baseURL, "https://") {
 		return client
 	}
 
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-	if caPEM, err := os.ReadFile(saCAPath); err == nil {
+	switch {
+	case metricsTLS != nil && metricsTLS.InsecureSkipVerify:
+		// OpenShift Thanos uses a service-serving cert not trusted by the SA CA.
+		tlsConfig.InsecureSkipVerify = true
+	case len(caPEM) > 0:
 		pool := x509.NewCertPool()
 		if pool.AppendCertsFromPEM(caPEM) {
 			tlsConfig.RootCAs = pool
 		} else {
 			tlsConfig.InsecureSkipVerify = true
 		}
-	} else {
-		// Outside a cluster (unit tests / local run) fall back to system CAs,
-		// and allow insecure verify only when SA CA is unavailable in-cluster paths.
-		tlsConfig.InsecureSkipVerify = true
+	default:
+		if saCA, err := os.ReadFile(saCAPath); err == nil {
+			pool := x509.NewCertPool()
+			if pool.AppendCertsFromPEM(saCA) {
+				tlsConfig.RootCAs = pool
+			}
+			// If SA CA PEM is malformed, fall through to system CAs (secure default).
+		}
+		// No metricsTLS and no usable SA CA: use system trust store (do not skip verify).
+		// OpenShift Thanos requires metricsTLS.insecureSkipVerify or caSecretRef.
 	}
 	client.Transport = &http.Transport{TLSClientConfig: tlsConfig}
 	return client
 }
 
+// loadMetricsCA reads an optional CA PEM from MetricsTLS.caSecretRef in the policy namespace.
+func (r *SmartScalingPolicyReconciler) loadMetricsCA(ctx context.Context, policy *kairosv1alpha1.SmartScalingPolicy) ([]byte, error) {
+	if policy.Spec.MetricsTLS == nil || policy.Spec.MetricsTLS.CASecretRef == nil {
+		return nil, nil
+	}
+	ref := policy.Spec.MetricsTLS.CASecretRef
+	if ref.Name == "" || ref.Key == "" {
+		return nil, fmt.Errorf("metricsTLS.caSecretRef requires name and key")
+	}
+	var secret corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: policy.Namespace}, &secret); err != nil {
+		return nil, fmt.Errorf("get metricsTLS CA secret %s/%s: %w", policy.Namespace, ref.Name, err)
+	}
+	caPEM, ok := secret.Data[ref.Key]
+	if !ok || len(caPEM) == 0 {
+		return nil, fmt.Errorf("metricsTLS CA secret %s/%s missing key %q", policy.Namespace, ref.Name, ref.Key)
+	}
+	return caPEM, nil
+}
+
 // queryPrometheus performs a PromQL instant query against the configured endpoint.
 // For HTTPS / OpenShift monitoring endpoints it attaches the in-cluster SA bearer token.
-func queryPrometheus(ctx context.Context, endpoint, promQL string) (float64, error) {
+// metricsTLS controls certificate verification (insecureSkipVerify / custom CA).
+func queryPrometheus(ctx context.Context, endpoint, promQL string, metricsTLS *kairosv1alpha1.TLSConfig, caPEM []byte) (float64, error) {
 	if endpoint == "" {
 		return 0, fmt.Errorf("no prometheus endpoint configured")
 	}
@@ -444,7 +475,7 @@ func queryPrometheus(ctx context.Context, endpoint, promQL string) (float64, err
 		}
 	}
 
-	resp, err := prometheusHTTPClient(base).Do(req)
+	resp, err := prometheusHTTPClient(base, metricsTLS, caPEM).Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("query prometheus: %w", err)
 	}
@@ -527,7 +558,14 @@ func (r *SmartScalingPolicyReconciler) evaluateMetricRule(
 		return false, nil
 	}
 
-	value, err := queryPrometheus(ctx, promEndpoint, rule.When.Metric)
+	caPEM, err := r.loadMetricsCA(ctx, policy)
+	if err != nil {
+		log.Info("Failed to load metricsTLS CA, skipping rule (safe default)", "rule", rule.Name, "error", err.Error())
+		ruleConditionSince.Delete(key)
+		return false, nil
+	}
+
+	value, err := queryPrometheus(ctx, promEndpoint, rule.When.Metric, policy.Spec.MetricsTLS, caPEM)
 	if err != nil {
 		log.Info("Prometheus query failed, skipping rule (safe default)", "rule", rule.Name, "error", err.Error())
 		ruleConditionSince.Delete(key)

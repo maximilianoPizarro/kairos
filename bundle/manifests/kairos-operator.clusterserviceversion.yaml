@@ -360,21 +360,36 @@ spec:
 
     Flow: `Spoke Agent --(mTLS reports)--> Hub Console/Operator --(SSA)--> Workloads`
 
-    Full diagram: https://raw.githubusercontent.com/maximilianoPizarro/kairos/main/docs/images/architecture.png
+    Full diagram: https://maximilianopizarro.github.io/kairos/images/architecture.png
 
     ### Prerequisites
 
     * OpenShift 4.12+ or Kubernetes 1.25+
     * (Optional) AI model endpoint — OpenAI, Ollama, vLLM, or any compatible API
     * (Optional) Prometheus/Thanos for metrics collection
+    * On OpenShift, grant Thanos access (Observability + SmartScalingPolicy PromQL):
+
+      ```bash
+      oc create clusterrolebinding kairos-console-monitoring \
+        --clusterrole=cluster-monitoring-view \
+        --serviceaccount=kairos-system:kairos-console
+      oc create clusterrolebinding kairos-controller-monitoring \
+        --clusterrole=cluster-monitoring-view \
+        --serviceaccount=kairos-system:kairos-controller-manager
+      ```
+
+      For Thanos HTTPS with the OpenShift service-serving cert, set
+      `spec.metricsTLS.insecureSkipVerify: true` on SmartScalingPolicy
+      (or provide `metricsTLS.caSecretRef` with the service CA).
 
     ### Quick Start
 
     1. Install the operator from OperatorHub
     2. A default `KairosConsole` is created automatically with a Route
-    3. Create a `KairosAgent` to start monitoring workloads
-    4. Annotate target workloads with `kairos.io/managed: "true"`
-    5. View recommendations in the Kairos Console
+    3. (OpenShift) Create the `cluster-monitoring-view` bindings above for Thanos
+    4. Create a `KairosAgent` to start monitoring workloads
+    5. Annotate target workloads with `kairos.io/managed: "true"`
+    6. View recommendations in the Kairos Console
   displayName: Kairos Operator
   icon:
   - base64data: PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnMSIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwYmNkNCIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzFhMjM3ZSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjIzIiBmaWxsPSIjMGQxMTE3Ii8+PGNpcmNsZSBjeD0iMjQiIGN5PSIyNCIgcj0iMjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwZTVmZiIgc3Ryb2tlLXdpZHRoPSIwLjgiIG9wYWNpdHk9IjAuNiIvPjxwYXRoIGQ9Ik0xNyAxMCBMMzEgMTAgTDI1LjUgMjIuNSBMMjQgMjQgTDIyLjUgMjIuNSBMMTcgMTAgWiIgZmlsbD0idXJsKCNnMSkiIG9wYWNpdHk9IjAuOSIvPjxwYXRoIGQ9Ik0xNyAzOCBMMzEgMzggTDI1LjUgMjUuNSBMMjQgMjQgTDIyLjUgMjUuNSBMMTcgMzggWiIgZmlsbD0idXJsKCNnMSkiIG9wYWNpdHk9IjAuOSIvPjxwYXRoIGQ9Ik0xNiA5IEwzMiA5IiBzdHJva2U9IiMwMGU1ZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMTYgMzkgTDMyIDM5IiBzdHJva2U9IiMwMGU1ZmYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMTIgMjAgQzkgMTggNSAxNyAzIDE4IEM1IDIwIDggMjIgMTIgMjMiIGZpbGw9IiMwMGJjZDQiIG9wYWNpdHk9IjAuNyIvPjxwYXRoIGQ9Ik0zNiAyMCBDMzkgMTggNDMgMTcgNDUgMTggQzQzIDIwIDQwIDIyIDM2IDIzIiBmaWxsPSIjMDBiY2Q0IiBvcGFjaXR5PSIwLjciLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjI0IiByPSIyLjUiIGZpbGw9IiMwMGU1ZmYiLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjI0IiByPSIxLjIiIGZpbGw9IiMwZDExMTciLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjE1IiByPSIwLjYiIGZpbGw9IiNmZmFiNDAiIG9wYWNpdHk9IjAuOCIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iMzIiIHI9IjAuNSIgZmlsbD0iI2ZmYWI0MCIgb3BhY2l0eT0iMC42Ii8+PC9zdmc+

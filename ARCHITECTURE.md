@@ -202,8 +202,25 @@ The operator ServiceAccount has cluster-wide permissions to:
 - `create, update, patch` Events
 
 The console ServiceAccount additionally has:
-- `cluster-monitoring-view` ClusterRole (Thanos queries)
 - `get, list, watch` Deployments/StatefulSets across namespaces (managed resource listing)
+- `update, patch` on `KairosEvent` (approvals UI)
+
+### OpenShift monitoring (required for Thanos)
+
+The operator cannot grant `cluster-monitoring-view` to itself at runtime. An admin must create:
+
+```bash
+oc create clusterrolebinding kairos-console-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-console
+
+oc create clusterrolebinding kairos-controller-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-controller-manager
+```
+
+- Console → Observability page / Thanos connectivity
+- Controller → SmartScalingPolicy PromQL queries
 
 ### TLS Configuration
 
@@ -220,7 +237,9 @@ tls:
 Applicable to:
 - AI model endpoint (`spec.aiModel.tls`)
 - Hub reporting endpoint (`spec.hubReporting.tls`)
-- Metrics endpoints (`spec.metricsTLS`)
+- Metrics endpoints (`spec.metricsTLS`) — **required for OpenShift Thanos**
+  (`insecureSkipVerify: true` or `caSecretRef` with the service-serving CA;
+  the pod SA CA is not the signer for `thanos-querier`)
 
 ## Technology Stack
 

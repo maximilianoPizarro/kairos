@@ -22,7 +22,22 @@ Captured on OpenShift local (CRC) with the `hack/crc-scenarios` demo (real CRs, 
 
 ## Intentionally omitted
 
-- **Observability** — Thanos / cluster monitoring not wired on CRC (`Disconnected`)
+- **Observability** — requires OpenShift `cluster-monitoring-view` bindings (see below). CRC often lacks full monitoring; CI/OCP clusters should bind console + controller SAs.
+
+## OpenShift monitoring (Thanos)
+
+```bash
+oc create clusterrolebinding kairos-console-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-console
+
+oc create clusterrolebinding kairos-controller-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-controller-manager
+```
+
+For SmartScalingPolicy PromQL against Thanos HTTPS, set `spec.metricsTLS.insecureSkipVerify: true`
+(or `caSecretRef` with the service CA).
 
 ## Re-capture
 

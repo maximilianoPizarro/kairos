@@ -202,21 +202,36 @@ spec:
 
     Flow: `Spoke Agent --(mTLS reports)--> Hub Console/Operator --(SSA)--> Workloads`
 
-    Full diagram: https://raw.githubusercontent.com/maximilianoPizarro/kairos/main/docs/images/architecture.png
+    Full diagram: https://maximilianopizarro.github.io/kairos/images/architecture.png
 
     ### Prerequisites
 
     * OpenShift 4.12+ or Kubernetes 1.25+
     * (Optional) AI model endpoint — OpenAI, Ollama, vLLM, or any compatible API
     * (Optional) Prometheus/Thanos for metrics collection
+    * On OpenShift, grant Thanos access (Observability + SmartScalingPolicy PromQL):
+
+      ```bash
+      oc create clusterrolebinding kairos-console-monitoring \
+        --clusterrole=cluster-monitoring-view \
+        --serviceaccount=kairos-system:kairos-console
+      oc create clusterrolebinding kairos-controller-monitoring \
+        --clusterrole=cluster-monitoring-view \
+        --serviceaccount=kairos-system:kairos-controller-manager
+      ```
+
+      For Thanos HTTPS with the OpenShift service-serving cert, set
+      `spec.metricsTLS.insecureSkipVerify: true` on SmartScalingPolicy
+      (or provide `metricsTLS.caSecretRef` with the service CA).
 
     ### Quick Start
 
     1. Install the operator from OperatorHub
     2. A default `KairosConsole` is created automatically with a Route
-    3. Create a `KairosAgent` to start monitoring workloads
-    4. Annotate target workloads with `kairos.io/managed: "true"`
-    5. View recommendations in the Kairos Console
+    3. (OpenShift) Create the `cluster-monitoring-view` bindings above for Thanos
+    4. Create a `KairosAgent` to start monitoring workloads
+    5. Annotate target workloads with `kairos.io/managed: "true"`
+    6. View recommendations in the Kairos Console
 
   displayName: Kairos Operator
   icon:

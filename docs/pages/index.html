@@ -1016,10 +1016,18 @@ oc create clusterrolebinding kairos-console-resources-binding \
   --clusterrole=kairos-console-resources \
   --serviceaccount=kairos-system:kairos-console
 
-# Allow Thanos metrics access
+# Allow Thanos metrics access (console Observability + controller PromQL)
 oc create clusterrolebinding kairos-console-monitoring \
   --clusterrole=cluster-monitoring-view \
-  --serviceaccount=kairos-system:kairos-console</code></pre>
+  --serviceaccount=kairos-system:kairos-console
+
+oc create clusterrolebinding kairos-controller-monitoring \
+  --clusterrole=cluster-monitoring-view \
+  --serviceaccount=kairos-system:kairos-controller-manager
+
+# SmartScalingPolicy against OpenShift Thanos Querier also needs TLS config:
+#   metricsTLS.insecureSkipVerify: true
+# or metricsTLS.caSecretRef pointing at the OpenShift service CA.</code></pre>
 
     <h4>Step 3: Configure Each Spoke Cluster Agent</h4>
     <p>Each spoke cluster needs a <strong>KairosAgent</strong> that reports to the hub console:</p>

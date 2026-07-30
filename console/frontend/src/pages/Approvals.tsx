@@ -55,7 +55,7 @@ export const Approvals: React.FC = () => {
         Pending Approvals
       </Title>
       <p style={{ marginBottom: '1rem', color: '#6a737d' }}>
-        Approval requests from agents running in supervised mode. Review proposed changes before they are applied.
+        Approval requests from agents in supervised mode. Approve queues the change for the operator to apply to the workload; Reject discards it.
       </p>
 
       <Card isFlat>

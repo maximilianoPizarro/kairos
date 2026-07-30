@@ -936,7 +936,9 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newStatus := "applied"
+	// Approve marks the event for the operator to apply (approved → applied).
+	// Reject is terminal. Never set applied here — that implies a cluster mutation.
+	newStatus := "approved"
 	responseStatus := "approved"
 	if action == "reject" {
 		newStatus = "rejected"
@@ -948,6 +950,10 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		for _, ev := range events {
 			if ev.Metadata.UID == id {
+				if ev.Spec.Status != "pending-approval" {
+					http.Error(w, `{"error":"event is not pending-approval"}`, http.StatusConflict)
+					return
+				}
 				ev.Spec.Status = newStatus
 				evJSON, marshalErr := json.Marshal(map[string]interface{}{
 					"apiVersion": crdGroup + "/" + crdVersion,
@@ -981,6 +987,11 @@ func handleApprovalAction(w http.ResponseWriter, r *http.Request) {
 	found := false
 	for i, a := range approvalStore.items {
 		if a["id"] == id {
+			if a["status"] != "pending" {
+				approvalStore.Unlock()
+				http.Error(w, `{"error":"event is not pending-approval"}`, http.StatusConflict)
+				return
+			}
 			found = true
 			approvalStore.items[i]["status"] = newStatus
 			break

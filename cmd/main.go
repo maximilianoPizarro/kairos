@@ -225,6 +225,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KairosConsole")
 		os.Exit(1)
 	}
+	if err = (&controller.KairosEventReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KairosEvent")
+		os.Exit(1)
+	}
 
 	// Auto-create default KairosConsole if none exists in the operator namespace
 	if err := mgr.Add(&defaultConsoleBootstrapper{

@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +41,7 @@ import (
 
 	kairosv1alpha1 "github.com/maximilianoPizarro/kairos/api/v1alpha1"
 	"github.com/maximilianoPizarro/kairos/internal/ai"
+	"github.com/maximilianoPizarro/kairos/internal/scaler"
 )
 
 const (
@@ -141,11 +143,25 @@ func (r *KairosAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	agent.Status.LastCheckTime = &now
 	agent.Status.WatchedResources = watchedCount
 
+	applied := 0
+	pending := 0
+	for _, c := range corrections {
+		if c.Applied {
+			applied++
+		} else {
+			pending++
+		}
+	}
+	agent.Status.TotalCorrections += int32(applied)
 	if len(corrections) > 0 {
-		agent.Status.Phase = kairosv1alpha1.AgentPhaseCorrecting
-		agent.Status.TotalCorrections += int32(len(corrections))
 		agent.Status.RecentCorrections = appendCorrections(agent.Status.RecentCorrections, corrections, 20)
-	} else {
+	}
+	switch {
+	case pending > 0:
+		agent.Status.Phase = kairosv1alpha1.AgentPhaseWaitingApproval
+	case applied > 0:
+		agent.Status.Phase = kairosv1alpha1.AgentPhaseCorrecting
+	default:
 		agent.Status.Phase = kairosv1alpha1.AgentPhaseActive
 	}
 
@@ -344,6 +360,8 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 		AIResponse: fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 	}
 
+	proposed := proposedSnapshot(recommendation, currentCPU, currentMemory, currentReplicas)
+
 	// Dry-run mode: record recommendation without applying
 	if agent.Spec.CorrectionPolicy.DryRun {
 		record.Applied = false
@@ -353,19 +371,23 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 			Namespace:      deploy.Namespace,
 			CurrentCPU:     currentCPU,
 			CurrentMemory:  currentMemory,
-			ProposedCPU:    recommendation.Action,
-			ProposedMemory: "",
+			ProposedCPU:    proposed.CPU,
+			ProposedMemory: proposed.Memory,
 			Reason:         recommendation.Reason,
 			AIResponse:     fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 		})
-		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, "", "", "dry-run")
+		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, proposed, kairosv1alpha1.EventStatusDryRun)
 		return record
 	}
 
-	// In supervised mode, add to pending approvals
+	// In supervised mode, add to pending approvals (operator applies after console Approve)
 	if agent.Spec.Mode == kairosv1alpha1.AgentModeSupervised {
 		record.Applied = false
-		agent.Status.Phase = kairosv1alpha1.AgentPhaseWaitingApproval
+		if r.hasOpenApproval(ctx, agent.Namespace, deploy.Name, deploy.Namespace) {
+			log.Info("Pending approval already open, skipping duplicate",
+				"deployment", deploy.Name, "namespace", deploy.Namespace)
+			return record
+		}
 		agent.Status.PendingApprovals = append(agent.Status.PendingApprovals, kairosv1alpha1.PendingApproval{
 			ID:         fmt.Sprintf("%s-%s-%d", deploy.Namespace, deploy.Name, time.Now().Unix()),
 			Timestamp:  metav1.Now(),
@@ -375,43 +397,37 @@ func (r *KairosAgentReconciler) evaluateDeployment(
 			Reason:     recommendation.Reason,
 			AIResponse: fmt.Sprintf("confidence=%.2f", recommendation.Confidence),
 		})
-		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, "", "", "pending-approval")
+		r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, proposed, kairosv1alpha1.EventStatusPendingApproval)
 		return record
 	}
 
-	// Autopilot mode: apply the correction via SSA
+	// Autopilot / gitops: apply the correction via scaler SSA
 	log.Info("Applying AI correction",
 		"deployment", deploy.Name,
 		"action", recommendation.Action,
 		"reason", recommendation.Reason,
 	)
 
-	depCopy := deploy.DeepCopy()
-	mergePatch := client.MergeFrom(depCopy.DeepCopy())
-	depCopy.Spec.Template.Spec.Containers[0].Resources = deploy.Spec.Template.Spec.Containers[0].Resources
-	if err := r.Patch(ctx, depCopy, mergePatch); err != nil {
-		log.Error(err, "Failed to apply merge patch", "deployment", deploy.Name)
+	target, scaleAction, err := scaleActionFromRecommendation(deploy.Name, deploy.Namespace, recommendation, proposed)
+	if err != nil {
+		log.Error(err, "Cannot build scale action from recommendation", "deployment", deploy.Name)
+		record.Applied = false
+		return record
+	}
+	coord := scaler.NewCoordinator(r.Client)
+	if err := coord.ApplyScaling(ctx, target, scaleAction); err != nil {
+		log.Error(err, "Failed to apply scaling", "deployment", deploy.Name)
 		record.Applied = false
 		return record
 	}
 
-	// Re-read deployment to get after state
-	updatedDeploy := &appsv1.Deployment{}
-	var afterCPU, afterMemory string
-	if err := r.Get(ctx, types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace}, updatedDeploy); err == nil {
-		if len(updatedDeploy.Spec.Template.Spec.Containers) > 0 {
-			res := updatedDeploy.Spec.Template.Spec.Containers[0].Resources
-			if req, ok := res.Requests[corev1.ResourceCPU]; ok {
-				afterCPU = req.String()
-			}
-			if req, ok := res.Requests[corev1.ResourceMemory]; ok {
-				afterMemory = req.String()
-			}
-		}
+	after := proposed
+	if state, err := coord.GetCurrentState(ctx, target); err == nil {
+		after = snapshotFromState(state)
 	}
 
 	record.Applied = true
-	r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, afterCPU, afterMemory, "applied")
+	r.createEvent(ctx, agent, deploy.Name, deploy.Namespace, recommendation, currentCPU, currentMemory, after, kairosv1alpha1.EventStatusApplied)
 
 	return record
 }
@@ -455,7 +471,15 @@ func (r *KairosAgentReconciler) detectConflictingController(ctx context.Context,
 }
 
 // createEvent creates a KairosEvent for audit trail.
-func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1alpha1.KairosAgent, resourceName, namespace string, rec *ai.ScalingRecommendation, currentCPU, currentMemory, afterCPU, afterMemory, status string) {
+func (r *KairosAgentReconciler) createEvent(
+	ctx context.Context,
+	agent *kairosv1alpha1.KairosAgent,
+	resourceName, namespace string,
+	rec *ai.ScalingRecommendation,
+	currentCPU, currentMemory string,
+	after kairosv1alpha1.ResourceSnapshot,
+	status string,
+) {
 	event := &kairosv1alpha1.KairosEvent{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kairos-event-",
@@ -471,10 +495,7 @@ func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1
 				CPU:    currentCPU,
 				Memory: currentMemory,
 			},
-			After: kairosv1alpha1.ResourceSnapshot{
-				CPU:    afterCPU,
-				Memory: afterMemory,
-			},
+			After:      after,
 			Reason:     rec.Reason,
 			AIResponse: fmt.Sprintf("confidence=%.2f, action=%s", rec.Confidence, rec.Action),
 			DryRun:     agent.Spec.CorrectionPolicy.DryRun,
@@ -484,6 +505,73 @@ func (r *KairosAgentReconciler) createEvent(ctx context.Context, agent *kairosv1
 	if err := r.Create(ctx, event); err != nil {
 		logf.FromContext(ctx).Error(err, "Failed to create KairosEvent")
 	}
+}
+
+func (r *KairosAgentReconciler) hasOpenApproval(ctx context.Context, eventNS, resource, resourceNS string) bool {
+	list := &kairosv1alpha1.KairosEventList{}
+	if err := r.List(ctx, list, client.InNamespace(eventNS)); err != nil {
+		return false
+	}
+	for i := range list.Items {
+		ev := &list.Items[i]
+		if ev.Spec.Resource != resource || ev.Spec.Namespace != resourceNS {
+			continue
+		}
+		switch ev.Spec.Status {
+		case kairosv1alpha1.EventStatusPendingApproval, kairosv1alpha1.EventStatusApproved:
+			return true
+		}
+	}
+	return false
+}
+
+func proposedSnapshot(rec *ai.ScalingRecommendation, currentCPU, currentMemory string, currentReplicas int32) kairosv1alpha1.ResourceSnapshot {
+	snap := kairosv1alpha1.ResourceSnapshot{
+		CPU:    currentCPU,
+		Memory: currentMemory,
+	}
+	if rec.Details != nil {
+		if v := rec.Details["cpu"]; v != "" {
+			snap.CPU = v
+		}
+		if v := rec.Details["memory"]; v != "" {
+			snap.Memory = v
+		}
+		if v := rec.Details["replicas"]; v != "" {
+			snap.Replicas = v
+		}
+	}
+	action := strings.ToLower(rec.Action)
+	if snap.Replicas == "" {
+		switch {
+		case strings.Contains(action, "scale_up"):
+			snap.Replicas = strconv.FormatInt(int64(currentReplicas+1), 10)
+		case strings.Contains(action, "scale_down"):
+			next := currentReplicas - 1
+			if next < 1 {
+				next = 1
+			}
+			snap.Replicas = strconv.FormatInt(int64(next), 10)
+		}
+	}
+	return snap
+}
+
+func scaleActionFromRecommendation(
+	name, namespace string,
+	rec *ai.ScalingRecommendation,
+	proposed kairosv1alpha1.ResourceSnapshot,
+) (scaler.TargetInfo, scaler.ScaleAction, error) {
+	ev := &kairosv1alpha1.KairosEvent{
+		Spec: kairosv1alpha1.KairosEventSpec{
+			Action:    rec.Action,
+			Resource:  name,
+			Namespace: namespace,
+			After:     proposed,
+			Reason:    rec.Reason,
+		},
+	}
+	return scaleActionFromEvent(ev)
 }
 
 func getClusterName(agent *kairosv1alpha1.KairosAgent) string {

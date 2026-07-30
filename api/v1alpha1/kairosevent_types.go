@@ -20,6 +20,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Canonical KairosEvent.spec.status values.
+const (
+	EventStatusPendingApproval = "pending-approval"
+	EventStatusApproved        = "approved"
+	EventStatusApplied         = "applied"
+	EventStatusRejected        = "rejected"
+	EventStatusDryRun          = "dry-run"
+	EventStatusFailed          = "failed"
+)
+
 // ResourceSnapshot captures resource values at a point in time.
 type ResourceSnapshot struct {
 	CPU      string `json:"cpu,omitempty"`
@@ -42,7 +52,7 @@ type KairosEventSpec struct {
 	// Resource state before the action
 	// +optional
 	Before ResourceSnapshot `json:"before,omitempty"`
-	// Resource state after the action
+	// Resource state after the action (proposed values while pending/approved)
 	// +optional
 	After ResourceSnapshot `json:"after,omitempty"`
 	// Human-readable reason for the action
@@ -54,7 +64,7 @@ type KairosEventSpec struct {
 	// Whether this was a dry-run (no actual changes applied)
 	// +optional
 	DryRun bool `json:"dryRun,omitempty"`
-	// EventStatus indicates the lifecycle state of a KairosEvent.
+	// Lifecycle: pending-approval | approved | applied | rejected | dry-run | failed
 	// +optional
 	Status string `json:"status,omitempty"`
 	// Name of the SmartScalingPolicy that generated this event (if applicable)

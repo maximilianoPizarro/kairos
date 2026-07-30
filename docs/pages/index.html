@@ -1273,7 +1273,8 @@ spec:
       </ul>
       <p>It responds with a recommended resource configuration and confidence level. In <code>autopilot</code> mode, 
       recommendations above the confidence threshold are applied automatically. In <code>supervised</code> mode, 
-      they're logged as events for human review.</p>
+      they become <code>pending-approval</code> events; Approve in the console sets <code>approved</code> and the
+      operator applies the change (then <code>applied</code>).</p>
     </div>
 
     <h3>Supported Endpoints</h3>
@@ -1313,8 +1314,8 @@ spec:
       </div>
       <div class="card">
         <div class="card-title"><span class="label label-blue">supervised</span> Mode</div>
-        <p>AI recommendations are logged as events but NOT applied. A human reviews recommendations in the console 
-        or via <code>oc get events</code> and decides whether to apply. Best for production-critical services.</p>
+        <p>AI recommendations wait as <code>pending-approval</code>. Approve in the console queues the operator to
+        apply via SSA; Reject discards the change. Best for production-critical services.</p>
       </div>
     </div>
   </div>

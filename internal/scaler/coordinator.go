@@ -324,8 +324,9 @@ func SetVerticalExhausted(c Coordinator, exhausted bool) {
 }
 
 // SetCooldownPeriod overrides the default cooldown between scaling actions.
+// Pass 0 to disable cooldown (e.g. human-approved KairosEvent applies).
 func SetCooldownPeriod(c Coordinator, period time.Duration) {
-	if impl, ok := c.(*coordinator); ok && period > 0 {
+	if impl, ok := c.(*coordinator); ok && period >= 0 {
 		impl.cooldownPeriod = period
 	}
 }

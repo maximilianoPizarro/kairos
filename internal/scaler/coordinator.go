@@ -188,6 +188,12 @@ func (c *coordinator) applyPatch(
 	replicas *int32,
 	reason string,
 ) error {
+	// Horizontal-only: use merge patch. A partial SSA Apply of Deployment/StatefulSet
+	// with only replicas can clear selector/template and fail validation.
+	if resources == nil && replicas != nil {
+		return c.patchReplicasMerge(ctx, target, *replicas, reason)
+	}
+
 	containerName, err := c.primaryContainerName(ctx, target)
 	if err != nil {
 		return err
@@ -195,6 +201,10 @@ func (c *coordinator) applyPatch(
 
 	switch target.Kind {
 	case kindDeployment:
+		live := &appsv1.Deployment{}
+		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, live); err != nil {
+			return err
+		}
 		patch := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -208,13 +218,24 @@ func (c *coordinator) applyPatch(
 					kairosv1alpha1.AnnotationLastActionTime: time.Now().UTC().Format(time.RFC3339),
 				},
 			},
+			Spec: appsv1.DeploymentSpec{
+				// Preserve selector so SSA does not attempt to null it.
+				Selector: live.Spec.Selector,
+				Replicas: replicas,
+			},
 		}
-		patch.Spec.Replicas = replicas
 		if resources != nil {
-			patch.Spec.Template.Spec.Containers = []corev1.Container{
-				{
-					Name:      containerName,
-					Resources: *resources,
+			patch.Spec.Template = corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: live.Spec.Template.Labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:      containerName,
+							Resources: *resources,
+						},
+					},
 				},
 			}
 		}
@@ -226,6 +247,10 @@ func (c *coordinator) applyPatch(
 			client.ForceOwnership,
 		)
 	case kindStatefulSet:
+		live := &appsv1.StatefulSet{}
+		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, live); err != nil {
+			return err
+		}
 		patch := &appsv1.StatefulSet{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -239,13 +264,23 @@ func (c *coordinator) applyPatch(
 					kairosv1alpha1.AnnotationLastActionTime: time.Now().UTC().Format(time.RFC3339),
 				},
 			},
+			Spec: appsv1.StatefulSetSpec{
+				Selector: live.Spec.Selector,
+				Replicas: replicas,
+			},
 		}
-		patch.Spec.Replicas = replicas
 		if resources != nil {
-			patch.Spec.Template.Spec.Containers = []corev1.Container{
-				{
-					Name:      containerName,
-					Resources: *resources,
+			patch.Spec.Template = corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: live.Spec.Template.Labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:      containerName,
+							Resources: *resources,
+						},
+					},
 				},
 			}
 		}
@@ -256,6 +291,41 @@ func (c *coordinator) applyPatch(
 			client.FieldOwner(kairosv1alpha1.FieldOwnerKairos),
 			client.ForceOwnership,
 		)
+	default:
+		return fmt.Errorf("%w: %s", ErrUnsupportedTargetKind, target.Kind)
+	}
+}
+
+func (c *coordinator) patchReplicasMerge(ctx context.Context, target TargetInfo, replicas int32, reason string) error {
+	switch target.Kind {
+	case kindDeployment:
+		dep := &appsv1.Deployment{}
+		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, dep); err != nil {
+			return err
+		}
+		base := dep.DeepCopy()
+		r := replicas
+		dep.Spec.Replicas = &r
+		if dep.Annotations == nil {
+			dep.Annotations = map[string]string{}
+		}
+		dep.Annotations[kairosv1alpha1.AnnotationLastAction] = reason
+		dep.Annotations[kairosv1alpha1.AnnotationLastActionTime] = time.Now().UTC().Format(time.RFC3339)
+		return c.client.Patch(ctx, dep, client.MergeFrom(base))
+	case kindStatefulSet:
+		sts := &appsv1.StatefulSet{}
+		if err := c.client.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, sts); err != nil {
+			return err
+		}
+		base := sts.DeepCopy()
+		r := replicas
+		sts.Spec.Replicas = &r
+		if sts.Annotations == nil {
+			sts.Annotations = map[string]string{}
+		}
+		sts.Annotations[kairosv1alpha1.AnnotationLastAction] = reason
+		sts.Annotations[kairosv1alpha1.AnnotationLastActionTime] = time.Now().UTC().Format(time.RFC3339)
+		return c.client.Patch(ctx, sts, client.MergeFrom(base))
 	default:
 		return fmt.Errorf("%w: %s", ErrUnsupportedTargetKind, target.Kind)
 	}

@@ -38,14 +38,14 @@ func TestScaleActionFromEventHorizontal(t *testing.T) {
 	if target.Name != "demo-app" || target.Namespace != "kairos-system" {
 		t.Fatalf("unexpected target: %+v", target)
 	}
-	if action.Type != "both" {
-		t.Fatalf("expected both, got %q", action.Type)
+	if action.Type != "horizontal" {
+		t.Fatalf("expected horizontal for scale_up, got %q", action.Type)
 	}
 	if action.Replicas == nil || *action.Replicas != 3 {
 		t.Fatalf("expected replicas=3, got %+v", action.Replicas)
 	}
-	if action.Resources == nil {
-		t.Fatal("expected resources")
+	if action.Resources != nil {
+		t.Fatal("scale_up should not patch resources (SSA template risk)")
 	}
 }
 

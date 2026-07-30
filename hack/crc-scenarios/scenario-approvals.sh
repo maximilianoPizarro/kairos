@@ -33,7 +33,8 @@ spec:
 EOF
 
 sleep 1
-AID=$(curl -sf "$BASE/api/v1/approvals" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next((a["id"] for a in d if a.get("resource")=="demo-app"), d[0]["id"] if d else ""))')
+# Prefer the scenario event UID so we don't reject a different demo-app pending.
+AID=$(oc get kairosevent evt-scenario-pending -n "$NS" -o jsonpath='{.metadata.uid}')
 echo "approval id=$AID"
 test -n "$AID"
 
@@ -73,7 +74,7 @@ spec:
     replicas: "3"
 EOF
 sleep 1
-AID=$(curl -sf "$BASE/api/v1/approvals" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next((a["id"] for a in d if a.get("reason","").startswith("CRC scenario: approve")), d[0]["id"] if d else ""))')
+AID=$(oc get kairosevent evt-scenario-pending -n "$NS" -o jsonpath='{.metadata.uid}')
 curl -sf -X POST "$BASE/api/v1/approvals/$AID/approve" | python3 -m json.tool
 
 # Console sets approved; KairosEvent reconciler applies and flips to applied

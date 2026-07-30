@@ -169,6 +169,15 @@ func scaleActionFromEvent(event *kairosv1alpha1.KairosEvent) (scaler.TargetInfo,
 		return target, scaler.ScaleAction{}, fmt.Errorf("resource action %q requires after.cpu/memory", event.Spec.Action)
 	}
 
+	// Prefer action semantics over a full after snapshot. Including template
+	// resources on a pure scale_* SSA Apply can clear selector/labels.
+	switch {
+	case isScale && !isResource:
+		resources = nil
+	case isResource && !isScale:
+		replicas = nil
+	}
+
 	scaleType := ""
 	switch {
 	case replicas != nil && resources != nil:
